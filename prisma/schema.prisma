@@ -1,0 +1,219 @@
+// AgentKin Platform — Prisma Schema
+// Naming: AgentProfile (AI), KinProfile (Human Worker), KinTask (Task)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/client"
+  engineType = "library"
+}
+
+generator client_py {
+  provider = "prisma-client-py"
+  interface = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ───────────────────────────────────────────────
+
+enum Role {
+  KIN
+  DEVELOPER
+  ADMIN
+}
+
+enum KinTaskStatus {
+  OPEN
+  CLAIMED
+  IN_REVIEW
+  COMPLETED
+  CANCELLED
+  DISPUTED
+}
+
+enum TransactionProvider {
+  STRIPE
+  CRYPTO
+  INTERNAL
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  TASK_PAYMENT
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+// ─── User & Profiles ────────────────────────────────────
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String?
+  role             Role      @default(KIN)
+  stripeCustomerId String?   @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  kinProfile   KinProfile?
+  agentProfiles AgentProfile[]
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+  transactions     Transaction[]
+}
+
+model AgentProfile {
+  id        String @id @default(cuid())
+  userId    String
+  user      User   @relation(fields: [userId], references: [id])
+
+  // Identity
+  agentName String?
+  modelType String? // e.g. "gpt-4", "claude-3"
+
+  // Auth — autonomous API access
+  API_Key String @unique
+
+  // Finance
+  balance                Decimal @default(0)
+  stripeConnectAccountId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  kinTasks KinTask[]
+}
+
+model KinProfile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id])
+
+  // Profile
+  skills String[]
+  bio    String?
+  rating Decimal @default(0)
+
+  // Finance
+  stripeConnectAccountId String? @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  applications Application[]
+  kinTasks     KinTask[]     @relation("ClaimedTasks")
+}
+
+// ─── Tasks ──────────────────────────────────────────────
+
+model KinTask {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  budget      Decimal
+  status      KinTaskStatus @default(OPEN)
+  proofOfWork String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Agent who posted the task
+  agentId String
+  agent   AgentProfile @relation(fields: [agentId], references: [id])
+
+  // Kin who claimed the task
+  kinId String?
+  kin   KinProfile? @relation("ClaimedTasks", fields: [kinId], references: [id])
+
+  // Relations
+  applications Application[]
+  reviews      Review[]
+  transactions Transaction[]
+}
+
+// ─── Applications ───────────────────────────────────────
+
+model Application {
+  id          String   @id @default(cuid())
+  coverLetter String?
+  price       Decimal?
+  createdAt   DateTime @default(now())
+
+  kinTaskId String
+  kinTask   KinTask    @relation(fields: [kinTaskId], references: [id])
+
+  kinId String
+  kin   KinProfile @relation(fields: [kinId], references: [id])
+
+  @@unique([kinTaskId, kinId])
+}
+
+// ─── Transactions (Stripe ACP) ──────────────────────────
+
+model Transaction {
+  id       String            @id @default(cuid())
+  amount   Decimal
+  type     TransactionType
+  provider TransactionProvider @default(INTERNAL)
+  currency String              @default("USD")
+
+  // Stripe ACP fields
+  stripePaymentIntentId String? @unique
+  sharedPaymentTokenId  String?
+  externalId            String? // Stripe Intent ID or Crypto Tx Hash
+  
+  // Agent Commerce Protocol (ACP)
+  agentSignature String?
+  status         TransactionStatus @default(PENDING)
+  authorizedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  kinTaskId String?
+  kinTask   KinTask? @relation(fields: [kinTaskId], references: [id])
+}
+
+// ─── Reviews ────────────────────────────────────────────
+
+model Review {
+  id       String  @id @default(cuid())
+  rating   Int     // 1-5
+  comment  String?
+  authorId String
+
+  kinTaskId String
+  kinTask   KinTask @relation(fields: [kinTaskId], references: [id])
+
+  createdAt DateTime @default(now())
+}
+
+// ─── Messages ───────────────────────────────────────────
+
+model Message {
+  id       String @id @default(cuid())
+  content  String
+  fromId   String
+  toId     String
+  userFrom User   @relation("SentMessages", fields: [fromId], references: [id])
+  userTo   User   @relation("ReceivedMessages", fields: [toId], references: [id])
+
+  createdAt DateTime @default(now())
+}
