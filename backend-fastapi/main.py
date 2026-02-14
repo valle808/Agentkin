@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from prisma_db import connect_db, disconnect_db
-from routers import tasks, payments, solana, system
+from routers import tasks, payments, solana, system, auth
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -42,6 +42,7 @@ app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
 app.include_router(payments.router, prefix="/api/v1", tags=["Payments"])
 app.include_router(solana.router, prefix="/api/v1", tags=["Solana"])
 app.include_router(system.router, prefix="/api/v1", tags=["System"])
+app.include_router(auth.router, prefix="/api/v1", tags=["Auth"])
 
 @app.get("/")
 async def root():

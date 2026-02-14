@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Optional
 from prisma_db import db
@@ -126,6 +126,10 @@ async def create_task(request: CreateTaskRequest):
         "status": task.status
     }
     await emit_new_task(task_data)
+
+    # Trigger Autonomous Execution
+    if request.target_motor:
+        background_tasks.add_task(execute_task_motor, task.id)
 
     return response
 

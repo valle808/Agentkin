@@ -72,8 +72,32 @@
     - [x] Initialized Git Repo (v2.0 Checkpoint).
 
 
-## Legacy: Web Prototype (Phase 1-7)
-- [x] Completed Web/FastAPI Prototype (See `agentkin/` folder)
+## Phase 9: CMS & Administration (✅ Implemented)
+- [x] **CMS Interface**:
+    - [x] Created `login.html`: Secure entry point.
+    - [x] Created `cms.html`: Admin dashboard.
+- [x] **Integration**:
+    - [x] Added "Admin Access" link to `index.html`.
+    - [x] Backend connectivity verified.
+
+## Phase 10: Auth & Wallets (✅ Completed)
+- [x] **Frontend**:
+    - [x] Created `register.html`: User/Agent Registration.
+    - [x] Update `login.html`: Added Phantom & Coinbase connect.
+    - [x] Update `cms.html`: Handle User vs Agent roles.
+- [x] **Backend**:
+    - [x] Created `routers/auth.py`: `/register`, `/login` endpoints.
+## Phase 13: Cloud Deployment (Current)
+- [ ] **Containerization**:
+    - [ ] Create `backend-fastapi/Dockerfile`.
+    - [ ] Create `backend-fastapi/railway.toml`.
+- [ ] **Version Control**:
+    - [ ] Create/Update `.gitignore`.
+    - [ ] Initialize Git repository.
+- [ ] **Launch**:
+    - [ ] Commit code.
+    - [ ] Guide user to push to GitHub.
+
 
 
 

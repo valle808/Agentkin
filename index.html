@@ -50,14 +50,33 @@
         }
 
         body.ghost-active {
-            filter: grayscale(100%) contrast(1.2);
-            /* Invert for privacy mode? Maybe just grayscale/high-contrast */
-            --bg-primary: #111;
-            --bg-surface: #222;
-            --text-primary: #EEE;
-            --text-secondary: #AAA;
-            background: #111;
-            color: #EEE;
+            filter: contrast(1.1);
+            --bg-primary: #050505;
+            --bg-surface: rgba(20, 20, 20, 0.4);
+            /* Transparent Surface */
+            --bg-overlay: rgba(10, 10, 10, 0.7);
+            --text-primary: #00FF00;
+            /* Matrix Green? Or Neon */
+            --text-secondary: #008800;
+            --border-subtle: #003300;
+            background: #050505;
+            color: #00FF00;
+        }
+
+        /* Ensure canvas is visible behind cards */
+        body.ghost-active .bento-card,
+        body.ghost-active header,
+        body.ghost-active section,
+        body.ghost-active .hero {
+            background: var(--bg-surface) !important;
+            backdrop-filter: blur(5px);
+            border-color: var(--border-subtle);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.1);
+        }
+
+        body.ghost-active .hero h1 {
+            color: #fff;
+            text-shadow: 0 0 10px #00FF00;
         }
 
         html {
@@ -144,8 +163,8 @@
             font-size: .85rem;
             font-weight: 600;
             cursor: pointer;
-            display: block;
-            /* ALWAYS VISIBLE */
+            display: none;
+            /* HIDDEN BY DEFAULT */
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -691,7 +710,7 @@
                 <a href="#features">Features</a>
                 <a href="#platform">Platform</a>
                 <button id="walletBtn" class="wallet-btn">Connect Wallet</button>
-                <button id="installBtn" class="install-btn">Install App</button>
+                <button id="installBtn" class="install-btn">Install AgentKin</button>
             </nav>
         </div>
     </header>
@@ -851,20 +870,28 @@
     <footer>
         <div class="footer-content">
             <div class="footer-col">
-                <h4>AgentKin</h4><a href="terms.html">Terms of Service</a>
+                <h4>AgentKin</h4><a href="terms.html">Terms of Service</a> | <a href="login.html"
+                    style="color:var(--accent-primary);text-decoration:none;">Admin Access</a>
             </div>
         </div>
     </footer>
     <script src="antigravity-background.js"></script>
+    <script src="alien-background.js"></script>
     <script>
         // PWA LOGIC
         let deferredPrompt;
         const installBtn = document.getElementById('installBtn');
+        // Initially hidden to avoid confusion if browser not ready
+        installBtn.style.display = 'none';
 
         // Capture install prompt
         window.addEventListener('beforeinstallprompt', (e) => {
+            // Prevent standard prompt
             e.preventDefault();
             deferredPrompt = e;
+            // Show our custom button
+            installBtn.style.display = 'block';
+            installBtn.textContent = "Install App";
             console.log("Install prompt captured");
         });
 
@@ -880,12 +907,14 @@
                     deferredPrompt = null;
                 });
             } else {
-                // Fallback for when prompt isn't available (e.g. already installed or iOS)
-                alert('To install AgentKin:\n1. Open browser menu (⋮ or Share)\n2. Select "Add to Home Screen" or "Install App"');
+                // Fallback should rarely handle if we hide button, but safety measure:
+                console.warn("Deferred Prompt not available");
+                alert("Installation not ready yet. Please reload or check if app is already installed.");
             }
         });
         window.addEventListener('appinstalled', () => {
             installBtn.style.display = 'none';
+            console.log("App Installed successfully");
         });
         if ('serviceWorker' in navigator) window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js'));
 
@@ -915,15 +944,22 @@
             // FUNCTIONAL GHOST MODE
             if (isActive) {
                 document.body.classList.add('ghost-active');
+                if (window.AntigravityBG) AntigravityBG.stop();
+                if (window.AlienBG) AlienBG.start();
+
                 localStorage.clear();
                 sessionStorage.clear();
-                alert("GHOST MODE: Local storage wiped. Privacy filter active.");
+                // Custom Alert Style maybe?
+                // alert("GHOST MODE: Local storage wiped. Privacy filter active.");
             } else {
                 document.body.classList.remove('ghost-active');
+                if (window.AlienBG) AlienBG.stop();
+                if (window.AntigravityBG) AntigravityBG.start();
             }
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            if (window.AntigravityBG) AntigravityBG.start();
             // 1. HERO TEXT PHYSICS
             const title = document.getElementById('hero-title');
             const part1 = "Build the "; const part2 = "Future";

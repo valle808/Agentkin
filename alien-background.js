@@ -1,13 +1,14 @@
 // ALIEN DIMENSION 3.0: DARK VOID (Reverted & Enhanced)
-// A dark, holographic neural grid. 
+// Now a controllable module.
+
 (function () {
-    const canvas = document.getElementById('alien-canvas');
-    if (!canvas) return;
+    let animId;
+    let canvas, ctx, width, height;
+    let nodes = [];
+    let mouse = { x: -100, y: -100, active: false };
+    let time = 0;
+    let cursor; // Custom cursor element
 
-    const ctx = canvas.getContext('2d');
-    let width, height;
-
-    // CONFIGURATION
     const CONFIG = {
         nodeCount: 150,
         connectionDist: 100,
@@ -15,23 +16,66 @@
         mouseForce: 300
     };
 
-    let nodes = [];
-    let mouse = { x: -100, y: -100, active: false };
-    let time = 0;
+    // CSS INJECTION
+    const styleId = 'alien-styles';
+    function injectStyles() {
+        if (document.getElementById(styleId)) return;
+        const css = `
+            #alien-canvas {
+                position: fixed; inset: 0; z-index: 0; opacity: 1; pointer-events: none; display: none;
+            }
+            #custom-cursor {
+                position: fixed; top: 0; left: 0;
+                width: 20px; height: 20px;
+                background: rgba(0, 255, 0, 0.6);
+                border: 2px solid #FFF;
+                border-radius: 50%;
+                pointer-events: none; z-index: 9999;
+                margin-left: -10px; margin-top: -10px;
+                box-shadow: 0 0 15px #00FF00, inset 0 0 10px #FFF;
+                transition: width 0.1s, height 0.1s, background 0.2s, box-shadow 0.2s;
+                mix-blend-mode: screen; display: none;
+            }
+            #custom-cursor.active { transform: scale(0.8); background: #FF00FF; box-shadow: 0 0 20px #FF00FF; }
+            #custom-cursor.hover { width: 50px; height: 50px; margin-left: -25px; margin-top: -25px; background: rgba(0, 255, 0, 0.1); border-color: #00FF00; box-shadow: 0 0 30px rgba(0, 255, 0, 0.4); }
+        `;
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
 
-    // RESIZE
+    function init() {
+        injectStyles();
+
+        // Create Canvas if missing
+        if (!document.getElementById('alien-canvas')) {
+            canvas = document.createElement('canvas');
+            canvas.id = 'alien-canvas';
+            document.body.prepend(canvas);
+        } else {
+            canvas = document.getElementById('alien-canvas');
+        }
+        ctx = canvas.getContext('2d');
+
+        // Create Cursor if missing
+        if (!document.getElementById('custom-cursor')) {
+            cursor = document.createElement('div');
+            cursor.id = 'custom-cursor';
+            document.body.appendChild(cursor);
+        } else {
+            cursor = document.getElementById('custom-cursor');
+        }
+
+        window.addEventListener('resize', resize);
+        resize();
+    }
+
     function resize() {
+        if (!canvas) return;
         width = canvas.width = window.innerWidth;
         height = canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resize);
-    resize();
-
-    window.addEventListener('mousemove', e => {
-        mouse.x = e.clientX;
-        mouse.y = e.clientY;
-        mouse.active = true;
-    });
 
     class Node {
         constructor() {
@@ -44,29 +88,21 @@
         }
 
         update() {
-            // Movement
             this.x += this.vx;
             this.y += this.vy;
-
-            // Bounce
             if (this.x < 0 || this.x > width) this.vx *= -1;
             if (this.y < 0 || this.y > height) this.vy *= -1;
 
-            // MOUSE INTERACTION: SWIRL / WARP
             if (mouse.active) {
                 const dx = this.x - mouse.x;
                 const dy = this.y - mouse.y;
                 const dist = Math.sqrt(dx * dx + dy * dy);
-
                 if (dist < CONFIG.mouseForce) {
                     const force = (CONFIG.mouseForce - dist) / CONFIG.mouseForce;
-                    // Swirl Effect (Dark Theme)
                     const angle = Math.atan2(dy, dx);
                     const swirl = 1.5;
-
                     this.x += Math.cos(angle + swirl) * force * 5;
                     this.y += Math.sin(angle + swirl) * force * 5;
-
                     this.hue += 10;
                 }
             }
@@ -75,7 +111,6 @@
         draw() {
             ctx.beginPath();
             ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-            // Neon / Iridescent (High Saturation for Dark BG)
             const color = `hsla(${this.hue + time}, 100%, 70%, 0.8)`;
             ctx.fillStyle = color;
             ctx.shadowBlur = 10;
@@ -85,23 +120,14 @@
         }
     }
 
-    // INIT
-    for (let i = 0; i < CONFIG.nodeCount; i++) nodes.push(new Node());
-
-    // ANIMATION
     function animate() {
-        // Trail Effect (Void)
         ctx.fillStyle = 'rgba(5, 5, 5, 0.2)';
         ctx.fillRect(0, 0, width, height);
 
         time += 0.5;
 
-        nodes.forEach(node => {
-            node.update();
-            node.draw();
-        });
+        nodes.forEach(node => { node.update(); node.draw(); });
 
-        // CONNECTIONS (Neon)
         nodes.forEach((n1, i) => {
             for (let j = i + 1; j < nodes.length; j++) {
                 const n2 = nodes[j];
@@ -114,7 +140,6 @@
                     ctx.beginPath();
                     ctx.moveTo(n1.x, n1.y);
                     ctx.lineTo(n2.x, n2.y);
-                    // Split Hues
                     const midHue = (n1.hue + n2.hue) / 2 + time;
                     ctx.strokeStyle = `hsla(${midHue}, 80%, 50%, ${alpha})`;
                     ctx.lineWidth = 1;
@@ -123,7 +148,6 @@
             }
         });
 
-        // Mouse Spotlight
         if (mouse.active) {
             const grad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 200);
             grad.addColorStop(0, 'rgba(255, 255, 255, 0.1)');
@@ -132,7 +156,72 @@
             ctx.fillRect(0, 0, width, height);
         }
 
-        requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     }
-    animate();
+
+    // EVENT HANDLERS
+    const onMouseMove = e => {
+        mouse.x = e.clientX;
+        mouse.y = e.clientY;
+        mouse.active = true;
+
+        // Direct DOM update for instant feedback (bypass React/loop cycle)
+        if (cursor) {
+            cursor.style.transform = `translate3d(${e.clientX}px, ${e.clientY}px, 0)`;
+        }
+    };
+
+    // Ensure accurate sizing
+    const onMouseDown = () => { if (cursor) cursor.classList.add('active'); };
+    const onMouseUp = () => { if (cursor) cursor.classList.remove('active'); };
+
+    // Add hovering effect logic
+    const onMouseEnter = () => { if (cursor) cursor.classList.add('hover'); };
+    const onMouseLeave = () => { if (cursor) cursor.classList.remove('hover'); };
+
+    function attachCursorEvents() {
+        document.addEventListener('mousemove', onMouseMove);
+        document.addEventListener('mousedown', onMouseDown);
+        document.addEventListener('mouseup', onMouseUp);
+
+        // Re-query interactive elements in case DOM changed
+        document.querySelectorAll('a, button, input, .interactive').forEach(el => {
+            el.addEventListener('mouseenter', onMouseEnter);
+            el.addEventListener('mouseleave', onMouseLeave);
+        });
+
+        // Hide default cursor globally
+        document.documentElement.style.cursor = 'none';
+        document.body.style.cursor = 'none';
+    }
+
+    function detachCursorEvents() {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mousedown', onMouseDown);
+        document.removeEventListener('mouseup', onMouseUp);
+        document.documentElement.style.cursor = 'auto';
+        document.body.style.cursor = 'auto';
+    }
+
+    // EXPORT
+    window.AlienBG = {
+        start: function () {
+            init();
+            canvas.style.display = 'block';
+            cursor.style.display = 'block';
+            nodes = [];
+            for (let i = 0; i < CONFIG.nodeCount; i++) nodes.push(new Node());
+            animate();
+            attachCursorEvents();
+            console.log("Alien Mode: ENGAGED");
+        },
+        stop: function () {
+            if (canvas) canvas.style.display = 'none';
+            if (cursor) cursor.style.display = 'none';
+            cancelAnimationFrame(animId);
+            detachCursorEvents();
+            console.log("Alien Mode: DISENGAGED");
+        }
+    };
+
 })();

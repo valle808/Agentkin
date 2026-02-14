@@ -1,10 +1,18 @@
-from typing import Any, Dict
+import os
 import httpx
+import logging
+from typing import Any, Dict
 from core.config import settings
+from socket_manager import emit_log
+
+# Configure Logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("MotorSwitcher")
 
 class MotorSwitcher:
     """
     Utility to switch between different LLM backends (Motors).
+    Handles real API calls with graceful degradation to mocks.
     """
     
     @staticmethod
@@ -18,68 +26,95 @@ class MotorSwitcher:
         elif target == "openclaw":
             return await MotorSwitcher._call_openclaw(prompt)
         else:
-            raise ValueError(f"Unknown Motor Target: {target_motor}")
+            logger.warning(f"Unknown Motor: {target_motor}, defaulting to OpenAI")
+            return await MotorSwitcher._call_openai(prompt)
 
     @staticmethod
     async def _call_openai(prompt: str) -> str:
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
+        await emit_log(f"OpenAI: Processing prompt...", "INFO")
+        api_key = getattr(settings, 'OPENAI_API_KEY', None) or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            await emit_log("OpenAI: MOCK MODE (No Key)", "WARN")
+            return "[OPENAI: MOCK] Key not found. Please set OPENAI_API_KEY in .env"
+
+        try:
+            # Try using official client first
+            import openai
+            client = openai.AsyncOpenAI(api_key=api_key)
+            response = await client.chat.completions.create(
+                model="gpt-4o",
+                messages=[{"role": "user", "content": prompt}]
+            )
+            logger.info("OpenAI Call Successful")
+            await emit_log("OpenAI: Response Generated", "SUCCESS")
+            return response.choices[0].message.content
+        except ImportError:
+            # Fallback to HTTPX
+            logger.info("OpenAI Library not found, using HTTPX")
+            await emit_log("OpenAI: Using HTTPX Fallback", "INFO")
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                res = await client.post(
                     "https://api.openai.com/v1/chat/completions",
-                    headers={"Authorization": f"Bearer {settings.OPENAI_API_KEY}"},
+                    headers={"Authorization": f"Bearer {api_key}"},
                     json={
                         "model": "gpt-4o",
-                        "messages": [{"role": "user", "content": prompt}],
-                        "temperature": 0.7
-                    },
-                    timeout=30.0
+                        "messages": [{"role": "user", "content": prompt}]
+                    }
                 )
-                response.raise_for_status()
-                data = response.json()
-                return data["choices"][0]["message"]["content"]
-            except Exception as e:
-                return f"OpenAI Error: {str(e)}"
+                if res.status_code == 200:
+                    await emit_log("OpenAI: HTTP Success", "SUCCESS")
+                    return res.json()["choices"][0]["message"]["content"]
+                await emit_log(f"OpenAI: HTTP Error {res.status_code}", "ERROR")
+                return f"[OPENAI: HTTP ERROR] {res.status_code} - {res.text}"
+        except Exception as e:
+            logger.error(f"OpenAI Failed: {e}")
+            await emit_log(f"OpenAI Failed: {str(e)}", "ERROR")
+            return f"[OPENAI: ERROR] {str(e)}"
 
     @staticmethod
     async def _call_gemini(prompt: str) -> str:
-        # Simplified Gemini REST call
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={settings.GEMINI_API_KEY}"
-        async with httpx.AsyncClient() as client:
-            try:
-                response = await client.post(
-                    url,
-                    headers={"Content-Type": "application/json"},
-                    json={"contents": [{"parts": [{"text": prompt}]}]},
-                    timeout=30.0
-        # Simulate processing time
-        await asyncio.sleep(2)
-        return f"""[GEMINI: THINKING]
-Analysis: User provided prompt '{prompt[:20]}...'
-Action: Generating response based on extensive knowledge base.
-Output: This is a simulated response from Google Gemini. I have analyzed your request and determined it requires X, Y, Z.
-[GEMINI: COMPLETE]
-"""
+        await emit_log(f"Gemini: Processing...", "INFO")
+        api_key = getattr(settings, 'GEMINI_API_KEY', None) or os.getenv("GEMINI_API_KEY")
+        if not api_key:
+            await emit_log("Gemini: MOCK MODE", "WARN")
+            return "[GEMINI: MOCK] Key not found. Please set GEMINI_API_KEY in .env"
+
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = await model.generate_content_async(prompt)
+            logger.info("Gemini Call Successful")
+            await emit_log("Gemini: Success", "SUCCESS")
+            return response.text
+        except ImportError:
+            await emit_log("Gemini: Lib Missing", "ERROR")
+            return "[GEMINI: ERROR] google-generativeai library not installed."
+        except Exception as e:
+            logger.error(f"Gemini Failed: {e}")
+            await emit_log(f"Gemini Failed: {str(e)}", "ERROR")
+            return f"[GEMINI: ERROR] {str(e)}"
 
     @staticmethod
     async def _call_openclaw(prompt: str) -> str:
-                )
-                if response.status_code == 200:
-                    data = response.json()
-                    return data.get("response", "")
-                return f"OpenClaw Status: {response.status_code}"
-            except Exception as e:
-                return f"OpenClaw Error: {str(e)}"
+        await emit_log(f"OpenClaw: Deep Scan Initiated...", "INFO")
+        api_key = getattr(settings, 'OPENAI_API_KEY', None) or os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            await emit_log("OpenClaw: Logic Simulated", "WARN")
+            return "[OPENCLAW: MOCK] Deep Scan Complete. Target Identified."
 
-#   ____                    _         _                
-#  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
-# | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     
-# | |___| | |  __/ (_| | (_| | (_) | | |_) | |_| |     
-#  \____|_|  \___|\__,_|\__,_|\___/  |_.__/ \__, |     
-#  ____                 _        __     __  |___/      
-# / ___|  ___ _ __ __ _(_) ___   \ \   / /_ _| | | ___ 
-# \___ \ / _ \ '__/ _` | |/ _ \   \ \ / / _` | | |/ _ \
-#  ___) |  __/ | | (_| | | (_) |   \ V / (_| | | |  __/
-# |____/ \___|_|  \__, |_|\___/     \_/ \__,_|_|_|\___|
-#                 |___/    
-#
-# Sergiio Valle Bastidas - valle808@hawaii.edu
+        try:
+            import openai
+            client = openai.AsyncOpenAI(api_key=api_key)
+            response = await client.chat.completions.create(
+                model="gpt-4-turbo",
+                messages=[
+                    {"role": "system", "content": "You are OpenClaw, an autonomous search heuristics engine. Analyze the prompt deeply."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            await emit_log("OpenClaw: Insight Acquired", "SUCCESS")
+            return "[OPENCLAW] " + response.choices[0].message.content
+        except Exception as e:
+            await emit_log(f"OpenClaw Error: {str(e)}", "ERROR")
+            return f"[OPENCLAW: ERROR] {str(e)}"

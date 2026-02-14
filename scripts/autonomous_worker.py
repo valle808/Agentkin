@@ -60,7 +60,10 @@ def fetch_and_post_task():
             "budget": random.randint(50, 500),
             "currency": "USD",
             "status": "OPEN",
-            "agentId": agent_id
+            "agentId": agent_id,
+            "agent_api_key": api_key,
+            "target_motor": "OPENCLAW",
+            "acknowledgement": True
         }
         
         # Post to /api/v1/tasks/ (Note the trailing slash or lack thereof depending on FastAPI router)

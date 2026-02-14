@@ -1,12 +1,12 @@
 // ANTIGRAVITY 3D MONOCHROME + ORANGE ACCENT
+// Now a controllable module.
+
 (function () {
-    const canvas = document.getElementById('glow-canvas');
-    if (!canvas) return;
+    let animId;
+    let canvas, ctx, width, height;
+    let particles = [];
+    let mouse = { x: 0, y: 0, isActive: false };
 
-    const ctx = canvas.getContext('2d');
-    let width, height;
-
-    // CONFIGURATION
     const CONFIG = {
         particleCount: 100,
         connectionDist: 140,
@@ -14,32 +14,34 @@
         colors: {
             particle: 'rgba(20, 20, 20, 0.6)',
             connection: 'rgba(0, 0, 0, 0.08)',
-            glow: 'rgba(255, 77, 0, 0.05)', // Orange Glow
-            accent: 'rgba(255, 77, 0, 0.6)' // INTENSE ORANGE
+            glow: 'rgba(255, 77, 0, 0.05)',
+            accent: 'rgba(255, 77, 0, 0.6)'
         },
         speed: 0.2,
         zDepth: 800
     };
 
-    let particles = [];
-    let mouse = { x: 0, y: 0, isActive: false };
+    function init() {
+        canvas = document.getElementById('glow-canvas');
+        if (!canvas) return;
+        ctx = canvas.getContext('2d');
+        resize();
+        window.addEventListener('resize', resize);
+    }
 
-    // RESIZE
     function resize() {
+        if (!canvas) return;
         width = canvas.width = window.innerWidth;
         height = canvas.height = window.innerHeight;
     }
-    window.addEventListener('resize', resize);
-    resize();
 
-    // MOUSE
-    window.addEventListener('mousemove', e => {
+    // MOUSE EVENT
+    const onMouseMove = e => {
         mouse.x = e.clientX;
         mouse.y = e.clientY;
         mouse.isActive = true;
-    });
+    };
 
-    // PARTICLE CLASS (3D)
     class Particle3D {
         constructor() { this.init(); }
         init() {
@@ -73,7 +75,7 @@
             const opacity = 1 - (this.z / CONFIG.zDepth);
 
             ctx.beginPath();
-            ctx.arc(px, py, size, 0, Math.PI * 2);
+            ctx.arc(px, py, Math.max(0, size), 0, Math.PI * 2);
             ctx.fillStyle = CONFIG.colors.particle.replace('0.6', (0.6 * opacity).toFixed(2));
             ctx.fill();
 
@@ -81,14 +83,10 @@
         }
     }
 
-    // INIT
-    for (let i = 0; i < CONFIG.particleCount; i++) particles.push(new Particle3D());
-
-    // ANIMATION
     function animate() {
+        if (!ctx) return;
         ctx.clearRect(0, 0, width, height);
 
-        // Orange Glow following mouse
         if (mouse.isActive) {
             const grad = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 600);
             grad.addColorStop(0, CONFIG.colors.glow);
@@ -99,7 +97,6 @@
 
         const points = particles.map(p => { p.update(); return p.draw(); });
 
-        // CONNECTIONS
         points.forEach((p1, i) => {
             for (let j = i + 1; j < points.length; j++) {
                 const p2 = points[j];
@@ -119,18 +116,16 @@
                 }
             }
 
-            // ORANGE MOUSE CONNECTIONS
             if (mouse.isActive) {
                 const mdx = p1.x - mouse.x;
                 const mdy = p1.y - mouse.y;
                 const mdist = Math.sqrt(mdx * mdx + mdy * mdy);
 
-                if (mdist < 180) { // Slightly larger radius
+                if (mdist < 180) {
                     const mAlpha = (1 - mdist / 180);
                     ctx.beginPath();
                     ctx.moveTo(p1.x, p1.y);
                     ctx.lineTo(mouse.x, mouse.y);
-                    // ACENT COLOR HERE
                     ctx.strokeStyle = `rgba(255, 77, 0, ${mAlpha.toFixed(2)})`;
                     ctx.lineWidth = 1.5;
                     ctx.stroke();
@@ -138,7 +133,26 @@
             }
         });
 
-        requestAnimationFrame(animate);
+        animId = requestAnimationFrame(animate);
     }
-    animate();
+
+    // EXPORT
+    window.AntigravityBG = {
+        start: function () {
+            init();
+            if (canvas) canvas.style.display = 'block';
+            particles = [];
+            for (let i = 0; i < CONFIG.particleCount; i++) particles.push(new Particle3D());
+            document.addEventListener('mousemove', onMouseMove);
+            animate();
+            console.log("Antigravity Mode: ENGAGED");
+        },
+        stop: function () {
+            if (canvas) canvas.style.display = 'none';
+            cancelAnimationFrame(animId);
+            document.removeEventListener('mousemove', onMouseMove);
+            console.log("Antigravity Mode: DISENGAGED");
+        }
+    };
+
 })();
