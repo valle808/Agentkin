@@ -1,12 +1,23 @@
-node_modules
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+backend-fastapi/venv/
+backend-fastapi/.pytest_cache/
+
+# Environment
 .env
-/generated/prisma
-backend-fastapi/venv
-__pycache__
-*.pyc
+.env.local
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# System
 .DS_Store
-.next
-coverage
-build
-dist
-out
+Thumbs.db
+
+# AgentKin Generated
+brain/
+logs/

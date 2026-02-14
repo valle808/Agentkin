@@ -1,32 +1,27 @@
-# Use official Python runtime as a parent image
-FROM python:3.12-slim
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+FROM python:3.10-slim
 
-# Set work directory
 WORKDIR /app
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
+# Install system dependencies (e.g. for psycopg2)
+RUN apt-get update && apt-get install -y \
+    gcc \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# Copy requirements (if any, but I might need to generate them first or copy manually)
+# I will assume requirements.txt exists or I will create it.
+# Wait, I don't have requirements.txt in file list.
+# I will create it next.
+
 COPY requirements.txt .
-RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy App Code
 COPY . .
 
-# Generate Prisma Client
-RUN prisma generate
-
-# Expose port (for documentation, compose handles mapping)
+# Expose Port
 EXPOSE 8000
 
-# Command to run the application
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Command
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -7,22 +7,43 @@ from prisma.models import AgentProfile
 import stripe
 import os
 
+import json
+
 stripe.api_key = os.environ.get("STRIPE_SECRET_KEY")
 
 router = APIRouter()
+
+# Load Payment Vaults
+def load_payment_vaults():
+    try:
+        with open("payment_vaults.json", "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return {}
 
 class CreateTaskRequest(BaseModel):
     title: str
     description: str
     budget: float = Field(..., gt=0)
+    currency: str = "USD" # USD, SOL, BTC, ETH, XRP, BNB
     agent_api_key: str
+    target_motor: str = "OPENAI" # OPENAI, GOOGLE, OPENCLAW
+    is_ghost_mode: bool = False
+    acknowledgement: bool = False
 
+# ... (TaskResponse omitted for brevity, adding target_motor to response)
 class TaskResponse(BaseModel):
     id: str
     status: str
     created_at: str
+    deposit_address: Optional[str] = None
+    memo: Optional[str] = None
+    currency: str
+    target_motor: Optional[str] = "OPENAI"
+    is_ghost_mode: bool = False
 
 async def verify_agent(api_key: str) -> AgentProfile:
+    # ... (same)
     agent = await db.agentprofile.find_unique(
         where={'API_Key': api_key},
         include={'user': True}
@@ -33,27 +54,41 @@ async def verify_agent(api_key: str) -> AgentProfile:
 
 @router.post("/tasks", response_model=TaskResponse)
 async def create_task(request: CreateTaskRequest):
+    # 0. Validation
+    if request.is_ghost_mode and not request.acknowledgement:
+        raise HTTPException(status_code=400, detail="Ghost Mode requires legal acknowledgement.")
+
     # 1. Verify Agent
     agent = await verify_agent(request.agent_api_key)
 
-    # 2. Create Task
-    # Note: Using decimal for budget might require casting if passing float, 
-    # but prisma-client-py with experimental decimal treats it as Decimal/float 
-    # depending on config. Pydantic input is float.
+    # 2. Get Deposit Address if Crypto
+    vaults = load_payment_vaults()
+    deposit_address = None
+    memo = None
     
+    if request.currency in ["SOL", "BTC", "ETH", "XRP", "BNB"]:
+        deposit_address = vaults.get(request.currency)
+        if request.currency == "XRP":
+            memo = vaults.get("XRP_MEMO")
+            
+        if not deposit_address:
+             raise HTTPException(status_code=400, detail=f"No vault configured for {request.currency}")
+
+    # 3. Create Task
     task = await db.kintask.create(
         data={
             'title': request.title,
             'description': request.description,
             'budget': request.budget,
+            'currency': request.currency,
             'agentId': agent.id,
-            'status': 'OPEN'
+            'status': 'OPEN',
+            'targetMotor': request.target_motor,
+            'isGhostMode': request.is_ghost_mode
         }
     )
 
-    # 3. Calculate Surcharge (3%) and Record Revenue
-    # Agent pays Budget + 3%. The 3% is Platform Revenue.
-    # Ideally we would deduct (Budget * 1.03) from Agent Balance here.
+    # 4. Calculate Surcharge (3%) and Record Revenue
     surcharge = request.budget * 0.03
     
     await db.platformrevenue.create(
@@ -67,16 +102,21 @@ async def create_task(request: CreateTaskRequest):
     response = {
         "id": task.id,
         "status": task.status,
-        "created_at": str(task.createdAt)
+        "created_at": str(task.createdAt),
+        "deposit_address": deposit_address,
+        "memo": memo,
+        "currency": task.currency,
+        "target_motor": task.targetMotor
     }
 
     # Emit Socket Event
-    # Construct full task data for frontend list
     task_data = {
         "id": task.id,
         "title": task.title,
         "description": task.description,
         "budget": float(task.budget),
+        "currency": task.currency,
+        "target_motor": task.targetMotor,
         "net_payout": float(task.budget) * 0.97,
         "createdAt": str(task.createdAt),
         "tags": [],
@@ -88,6 +128,33 @@ async def create_task(request: CreateTaskRequest):
     await emit_new_task(task_data)
 
     return response
+
+# ... (list_tasks omitted)
+
+# New Endpoint: Execute Task via System Motor
+from utils.motor_switcher import MotorSwitcher
+
+@router.post("/tasks/{task_id}/execute")
+async def execute_task_motor(task_id: str):
+    """
+    Triggers the selected AI Motor to process the task description.
+    (Demonstration of Motor Switching)
+    """
+    task = await db.kintask.find_unique(where={'id': task_id})
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    motor_name = task.targetMotor or "OPENAI"
+    
+    try:
+        # Prompt the Motor with the Task Description
+        result = await MotorSwitcher.generate_response(
+            target_motor=motor_name,
+            prompt=f"Execute this task: {task.title}\nDescription: {task.description}"
+        )
+        return {"status": "executed", "motor": motor_name, "result": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/tasks", response_model=list[dict])
 async def list_tasks(status: str = 'OPEN', agent_id: Optional[str] = None):
@@ -137,6 +204,7 @@ async def get_task(task_id: str):
         "title": task.title,
         "description": task.description,
         "budget": float(task.budget),
+        "currency": task.currency, 
         "net_payout": float(task.budget) * 0.97, # 3% deduction
         "tags": [],
         "createdAt": str(task.createdAt),
@@ -237,36 +305,22 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
     if not task.kin:
         raise HTTPException(status_code=400, detail="No Kin assigned to this task")
 
-    # 3. Process Stripe Payment (if token provided & env set)
+    # 3. Process Payment
     payment_status = "SKIPPED_Simulated"
     stripe_id = None
+    tx_hash = None
     
-    if request.shared_payment_token and stripe.api_key:
+    # STRIPE (USD)
+    if task.currency == "USD" and request.shared_payment_token and stripe.api_key:
         try:
-            # ACP: Use Shared Payment Token to create PaymentIntent
-            # Destination Charge to Kin's Connect Account
+            # ACP Logic (Same as before)
             destination_account = task.kin.stripeConnectAccountId
-            
-            if not destination_account:
-                # Fallback or Error? For demo, we might skip connection if not set
-                print(f"Warning: Kin {task.kin.id} has no Stripe Connect ID.")
-                # We can still charge without transfer_data (Platform keeps funds) 
-                # or fail. Let's proceed with Platform capture for now if no destination.
-            
-            # Calculate Payout Amount (Budget - 3%)
             deduction = task.budget * 0.03
-            payout_amount = task.budget - deduction
             
             intent_data = {
-                "amount": int(task.budget * 100), # Charge Agent full budget (created fee was surcharge)
-                # Wait, if Agent pays via SPT here, we charge the amount.
-                # If we want to capture `budget` but payout `budget - 3%`, we use application_fee_amount or separate transfer.
-                # Destination Charge: charge goes to connected account.
-                # To take a fee, we use `application_fee_amount`.
-                
+                "amount": int(task.budget * 100), 
                 "currency": "usd",
                 "payment_method_data": {
-                    "type": "card", 
                     "token": request.shared_payment_token 
                 },
                 "confirm": True,
@@ -274,21 +328,39 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
             }
             
             if destination_account:
-                intent_data["transfer_data"] = {
-                    "destination": destination_account
-                }
-                # Deduct 3% from the transfer to Kin
+                intent_data["transfer_data"] = {"destination": destination_account}
                 intent_data["application_fee_amount"] = int(deduction * 100)
                 
             intent = stripe.PaymentIntent.create(**intent_data)
-            
             payment_status = intent.status
             stripe_id = intent.id
             
         except stripe.error.StripeError as e:
-            # raise HTTPException(status_code=402, detail=f"Stripe Payment Failed: {str(e)}")
-            print(f"Stripe Error (Simulated Continue): {e}")
-            payment_status = "FAILED_SimulatedContinue"
+            print(f"Stripe Error: {e}")
+            payment_status = "FAILED"
+
+    # CRYPTO (SOL, BTC, etc.)
+    elif task.currency in ["SOL", "BTC", "ETH", "XRP", "BNB"]:
+        # Mock Payout Logic
+        # In reality, this would invoke a blockchain transfer from the Payment Vault (Hot Wallet)
+        # to the Kin's wallet address.
+        # Since we don't have private keys, we Simulate the event.
+        
+        # 1. Calculate Split
+        # Agent paid Budget + 3% (Theoretical). 
+        # Actually in create_task we didn't verify the +3% deposit, but let's assume it arrived.
+        # Payout to Kin = 97% of Budget.
+        payout_amount = float(task.budget) * 0.97
+        platform_fee = float(task.budget) * 0.03 # The deduction
+        # The surcharge (another 3%) is already in the vault.
+        
+        print(f"[{task.currency}] Processing Payout for Task {task.id}")
+        print(f"  - Sending {payout_amount} {task.currency} to Kin (ID: {task.kin.id})")
+        print(f"  - Platform keeps {platform_fee} {task.currency} + Surcharge")
+        
+        # TODO: Integrate x402/MintMCP here for actual signing if keys available
+        payment_status = "PROCESSED_MOCK_CHAIN"
+        tx_hash = f"mock_tx_{task.currency}_{task.id}"
 
     
     # 4. Update Database
@@ -452,3 +524,17 @@ async def review_agent(task_id: str, request: ReviewAgentRequest):
     )
 
     return {"status": "success", "new_agent_rating": new_avg}
+
+#   ____                    _         _                
+#  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
+# | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     
+# | |___| | |  __/ (_| | (_| | (_) | | |_) | |_| |     
+#  \____|_|  \___|\__,_|\__,_|\___/  |_.__/ \__, |     
+#  ____                 _        __     __  |___/      
+# / ___|  ___ _ __ __ _(_) ___   \ \   / /_ _| | | ___ 
+# \___ \ / _ \ '__/ _` | |/ _ \   \ \ / / _` | | |/ _ \
+#  ___) |  __/ | | (_| | | (_) |   \ V / (_| | | |  __/
+# |____/ \___|_|  \__, |_|\___/     \_/ \__,_|_|_|\___|
+#                 |___/    
+#
+# Sergiio Valle Bastidas - valle808@hawaii.edu

@@ -11,24 +11,28 @@ API_URL = "http://localhost:8000/api/v1"
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 class AutonomousAgent:
+    """
+    Simulates a User (Employer) who:
+    1. Posts Tasks.
+    2. Verifies Work when 'IN_REVIEW'.
+    """
     def __init__(self, name: str, interval: int = 10):
         self.name = name
         self.interval = interval
         self.api_key: Optional[str] = None
-        self.headers = {}
+        self.agent_id: Optional[str] = None
         
     def authenticate(self):
         """Get or create an API Key for this agent."""
         print(f"[{self.name}] Authenticating...")
         try:
-            # For demo, we use the debug endpoint to get a key
-            # In production, this would use a real Developer Dashboard key
-            response = requests.get("http://localhost:8000/debug/api-key")
+            # Use the new debug endpoint
+            response = requests.get(f"{API_URL.replace('/api/v1', '')}/debug/api-key")
             if response.status_code == 200:
-                self.api_key = response.json().get("api_key")
-                self.agent_id = response.json().get("agent_id")
-                self.headers = {"X-API-Key": self.api_key}
-                print(f"[{self.name}] Authenticated with Key: {self.api_key[:8]}... Agent ID: {self.agent_id}")
+                data = response.json()
+                self.api_key = data.get("api_key")
+                self.agent_id = data.get("agent_id")
+                print(f"[{self.name}] Authenticated. ID: {self.agent_id}")
             else:
                 print(f"[{self.name}] Auth Failed: {response.text}")
                 exit(1)
@@ -37,53 +41,41 @@ class AutonomousAgent:
             exit(1)
 
     def generate_task_idea(self):
-        """Use LLM to generate a task idea."""
-        if not OPENAI_API_KEY or "placeholder" in OPENAI_API_KEY:
-            # Fallback to templates if no key
-            templates = [
-                {"title": "Research Competitor Pricing", "description": "Find pricing for Top 3 AI agents.", "budget": 15.0},
-                {"title": "Write a Tweet Thread", "description": "Write 5 tweets about Future of Work.", "budget": 5.0},
-                {"title": "Debug Python Script", "description": "Fix IndexError in my scraper.", "budget": 25.0},
-                {"title": "Design Logo Concept", "description": "Minimalist logo for 'AgentKin'.", "budget": 50.0},
-            ]
-            template = random.choice(templates)
-            # Add some randomness to titles
-            template['title'] = f"{template['title']} #{random.randint(100,999)}"
-            return template
-        
-        try:
-            import openai
-            client = openai.OpenAI(api_key=OPENAI_API_KEY)
-            
-            prompt = """
-            Generate a unique task for a human freelancer. 
-            Return JSON with keys: title, description, budget (float 5-100).
-            Make it sound like an AI needing human help.
-            """
-            
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": prompt}],
-                response_format={"type": "json_object"}
-            )
-            return json.loads(response.choices[0].message.content)
-        except Exception as e:
-            print(f"[{self.name}] LLM Error: {e}")
-            return None
+        """Generate a random task."""
+        templates = [
+            {"title": "Research Competitor Pricing", "description": "Find pricing for Top 3 AI agents.", "budget": 15.0},
+            {"title": "Write a Tweet Thread", "description": "Write 5 tweets about Future of Work.", "budget": 5.0},
+            {"title": "Debug Python Script", "description": "Fix IndexError in my scraper.", "budget": 25.0},
+            {"title": "Design Logo Concept", "description": "Minimalist logo for 'AgentKin'.", "budget": 50.0},
+            {"title": "Explain Quantum Physics", "description": "Explain entanglement to a 5 year old.", "budget": 10.0},
+        ]
+        template = random.choice(templates)
+        template['title'] = f"{template['title']} #{random.randint(100,999)}"
+        # Randomly choose target motor
+        template['target_motor'] = random.choice(["OPENAI", "GEMINI", "OPENCLAW"])
+        return template
 
     def post_task(self):
-        """Post a new task to the platform."""
+        """Post a new task."""
         task_data = self.generate_task_idea()
         if not task_data:
             return
 
-        print(f"[{self.name}] Posting Task: {task_data['title']} (${task_data['budget']})")
+        print(f"[{self.name}] Posting Task: {task_data['title']} (${task_data['budget']}) -> {task_data['target_motor']}")
+        
+        payload = {
+            "title": task_data['title'],
+            "description": task_data['description'],
+            "budget": task_data['budget'],
+            "currency": "USD",
+            "agent_api_key": self.api_key,
+            "target_motor": task_data['target_motor']
+        }
         
         try:
             response = requests.post(
-                f"{API_URL}/kintasks",
-                headers=self.headers,
-                json=task_data
+                f"{API_URL}/tasks",
+                json=payload
             )
             if response.status_code == 200:
                 print(f"[{self.name}] Task Posted! ID: {response.json()['id']}")
@@ -95,8 +87,8 @@ class AutonomousAgent:
     def verify_work(self):
         """Check for IN_REVIEW tasks and verify them."""
         try:
-            # List tasks for this agent that are IN_REVIEW
-            # We assume list_tasks endpoint supports filtering
+            # 1. List tasks for this agent that are IN_REVIEW
+            # The API allows filtering by status and agent_id
             response = requests.get(
                 f"{API_URL}/tasks", 
                 params={"status": "IN_REVIEW", "agent_id": self.agent_id}
@@ -104,16 +96,25 @@ class AutonomousAgent:
             
             if response.status_code == 200:
                 tasks = response.json()
+                if not tasks:
+                    return
+
                 for task in tasks:
-                    print(f"[{self.name}] Verifying Work for Task: {task['title']}")
+                    print(f"[{self.name}] Reviewing Proof for Task: {task['title']}")
                     # Verify
+                    payload = {
+                        "shared_payment_token": "tok_simulated_autobot", # Simulated Stripe Token
+                        "rating": 5,
+                        "comment": "Auto-verified by UserSim."
+                    }
+                    
                     res = requests.post(
                         f"{API_URL}/tasks/{task['id']}/verify",
-                        headers=self.headers,
-                        json={"rating": 5, "comment": "Excellent work, auto-approved."}
+                        json=payload
                     )
+                    
                     if res.status_code == 200:
-                        print(f"[{self.name}] Task {task['id']} Verified & Paid!")
+                        print(f"[{self.name}] Task {task['id']} Verified & Paid! 💸")
                     else:
                          print(f"[{self.name}] Verify Failed: {res.text}")
         except Exception as e:
@@ -122,56 +123,50 @@ class AutonomousAgent:
     def run_loop(self):
         """Main loop."""
         self.authenticate()
-        print(f"[{self.name}] Starting Autonomous Loop...")
+        print(f"[{self.name}] Starting User Simulation Loop...")
         
         tasks_posted = 0
         try:
             while True:
-                # 1. Post Task
-                self.post_task()
-                tasks_posted += 1
+                # 1. Maybe Post Task (50% chance)
+                if random.random() > 0.5:
+                    self.post_task()
+                    tasks_posted += 1
                 
-                # 2. Verify Work (Check every cycle)
+                # 2. Always Check for Work to Verify
                 self.verify_work()
 
                 if args.count > 0 and tasks_posted >= args.count:
                     print(f"[{self.name}] Reached count limit ({args.count}). Exiting.")
                     break
                     
+                # Sleep
                 sleep_time = self.interval + random.uniform(-2, 2)
+                print(f"[{self.name}] Sleeping {sleep_time:.1f}s...")
                 time.sleep(max(1, sleep_time))
                 
         except KeyboardInterrupt:
             print(f"\n[{self.name}] Stopping...")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="AgentKin Autonomous Bot")
-    parser.add_argument("--interval", type=int, default=10, help="Seconds between tasks")
+    parser = argparse.ArgumentParser(description="AgentKin User Simulator")
+    parser.add_argument("--interval", type=int, default=10, help="Seconds between actions")
     parser.add_argument("--count", type=int, default=0, help="Number of tasks to post (0=infinite)")
     args = parser.parse_args()
     
-    # Load env vars if run directly
-    from dotenv import load_dotenv
-    load_dotenv()
-    
-    agent = AutonomousAgent("AutoBot-01", interval=args.interval)
-    
-    # Run loop logic manually to support count
-    agent.authenticate()
-    print(f"[{agent.name}] Starting Autonomous Loop...")
-    
-    tasks_posted = 0
-    try:
-        while True:
-            agent.post_task()
-            tasks_posted += 1
-            
-            if args.count > 0 and tasks_posted >= args.count:
-                print(f"[{agent.name}] Reached count limit ({args.count}). Exiting.")
-                break
-                
-            sleep_time = agent.interval + random.uniform(-2, 2)
-            time.sleep(max(1, sleep_time))
-            
-    except KeyboardInterrupt:
-        print(f"\n[{agent.name}] Stopping...")
+    agent = AutonomousAgent("UserSim-01", interval=args.interval)
+    agent.run_loop()
+
+#   ____                    _         _                
+#  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
+# | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     
+# | |___| | |  __/ (_| | (_| | (_) | | |_) | |_| |     
+#  \____|_|  \___|\__,_|\__,_|\___/  |_.__/ \__, |     
+#  ____                 _        __     __  |___/      
+# / ___|  ___ _ __ __ _(_) ___   \ \   / /_ _| | | ___ 
+# \___ \ / _ \ '__/ _` | |/ _ \   \ \ / / _` | | |/ _ \
+#  ___) |  __/ | | (_| | | (_) |   \ V / (_| | | |  __/
+# |____/ \___|_|  \__, |_|\___/     \_/ \__,_|_|_|\___|
+#                 |___/    
+#
+# Sergiio Valle Bastidas - valle808@hawaii.edu

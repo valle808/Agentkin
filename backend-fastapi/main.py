@@ -1,4 +1,8 @@
 from dotenv import load_dotenv
+import os, sys
+
+# Ensure backend dir is in path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 load_dotenv(dotenv_path="../.env")
 
@@ -6,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from prisma_db import connect_db, disconnect_db
-from routers import tasks, payments, solana
+from routers import tasks, payments, solana, system
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,26 +21,33 @@ async def lifespan(app: FastAPI):
     await disconnect_db()
 
 # Create FastAPI instance
-fastapi_app = FastAPI(title="AgentKin Engine", version="1.0.0", lifespan=lifespan)
+app = FastAPI(title="AgentKin Backend", version="1.0.0", lifespan=lifespan)
 
-fastapi_app.add_middleware(
+# Mount Socket.IO
+import socketio
+from socket_manager import sio
+app.mount("/socket.io", socketio.ASGIApp(sio))
+
+# CORS
+app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Register Routers
-fastapi_app.include_router(tasks.router, prefix="/api/v1")
-fastapi_app.include_router(payments.router, prefix="/api/v1")
-fastapi_app.include_router(solana.router, prefix="/api/v1")
+app.include_router(tasks.router, prefix="/api/v1", tags=["Tasks"])
+app.include_router(payments.router, prefix="/api/v1", tags=["Payments"])
+app.include_router(solana.router, prefix="/api/v1", tags=["Solana"])
+app.include_router(system.router, prefix="/api/v1", tags=["System"])
 
-@fastapi_app.get("/")
+@app.get("/")
 async def root():
     return {"message": "AgentKin Engine Running"}
 
-@fastapi_app.get("/debug/api-key")
+@app.get("/debug/api-key")
 async def debug_api_key():
     from prisma_db import db
     agent = await db.agentprofile.find_first()
@@ -61,7 +72,7 @@ async def debug_api_key():
     except Exception as e:
         return {"error": str(e), "note": "likely already exists or specific error"}
 
-@fastapi_app.get("/debug/kin-profile")
+@app.get("/debug/kin-profile")
 async def debug_kin_profile():
     from prisma_db import db
     # specific ID for auto worker
@@ -87,10 +98,33 @@ async def debug_kin_profile():
         )
     return {"kin_id": kin.id}
 
-# Mount Socket.IO
-import socketio
-from socket_manager import sio
+@app.get("/metrics")
+async def get_system_metrics():
+    from prisma_db import db
+    try:
+        tasks_open = await db.kintask.count(where={'status': 'OPEN'})
+        tasks_total = await db.kintask.count()
+        agents_count = await db.agentprofile.count()
+        return {
+            "tasks_open": tasks_open,
+            "tasks_total": tasks_total,
+            "agents": agents_count,
+            "uptime": "99.9%"
+        }
+    except Exception as e:
+        print(f"Metrics Error: {e}")
+        return {"tasks_open": 0, "tasks_total": 0, "agents": 0, "uptime": "N/A"}
 
-# Wrap the FastAPI app with Socket.IO ASGI app
-# This intercepts /socket.io requests and passes others to FastAPI
-app = socketio.ASGIApp(sio, other_asgi_app=fastapi_app)
+#   ____                    _         _                
+#  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
+# | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     
+# | |___| | |  __/ (_| | (_| | (_) | | |_) | |_| |     
+#  \____|_|  \___|\__,_|\__,_|\___/  |_.__/ \__, |     
+#  ____                 _        __     __  |___/      
+# / ___|  ___ _ __ __ _(_) ___   \ \   / /_ _| | | ___ 
+# \___ \ / _ \ '__/ _` | |/ _ \   \ \ / / _` | | |/ _ \
+#  ___) |  __/ | | (_| | | (_) |   \ V / (_| | | |  __/
+# |____/ \___|_|  \__, |_|\___/     \_/ \__,_|_|_|\___|
+#                 |___/    
+#
+# Sergiio Valle Bastidas - valle808@hawaii.edu

@@ -132,6 +132,7 @@ model KinTask {
   title       String
   description String
   budget      Decimal
+  currency    String        @default("USD") // USD, SOL, BTC, ETH, XRP, BNB
   status      KinTaskStatus @default(OPEN)
   proofOfWork String?
 
@@ -184,6 +185,13 @@ model Transaction {
   sharedPaymentTokenId  String?
   externalId            String? // Stripe Intent ID or Crypto Tx Hash
   
+  // Multi-Chain Fields
+  txHash      String?   @unique
+  chain       String?   // SOL, BTC, ETH, XRP, BNB
+  fromAddress String?
+  toAddress   String?
+  memo        String?   // For XRP tags
+
   // Agent Commerce Protocol (ACP)
   agentSignature String?
   status         TransactionStatus @default(PENDING)

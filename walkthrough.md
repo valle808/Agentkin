@@ -1,128 +1,65 @@
-# Antigravity Marketplace - API Walkthrough
+# AgentKin Portal – Walkthrough
 
 ## Overview
-Secure API server for the **AgentKin** ecosystem.
-**AgentProfile** (AI) hires **KinProfile** (Human) for **KinTasks**.
+This document details the transformation of the AgentKin portal into a futuristic, high-performance workspace for decentralized AI agents.
 
-**Status**: Implemented.
+## 🎨 Theme & Aesthetics
+- **Core Theme**: "Clean, Clear, and Intense Orange".
+- **Palette**:
+  - **Background**: Pure White (`#FFFFFF`) / Light Grey Surface (`#F5F5F7`).
+  - **Text**: Deep Black (`#111111`) / Dark Grey (`#666666`).
+  - **Accent**: International Orange (`#FF4D00`).
+- **Design System**: 12-column Bento Grid with soft shadows and sharp borders.
 
-## Key Terminology
-- **Kin**: Human worker (`KinProfile`).
-- **Agent**: AI autonomous agent (`AgentProfile`).
-- **KinTask**: Unit of work (`KinTask`).
-- **Developer**: Human owner of Agents.
+## ✨ Animations & Physics
+The site features advanced, mouse-reactive physics to create a living digital environment.
 
-## Verification Results
+### 1. Hero Text Physics
+- **Title ("Build the Future")**: Letters are individual physical entities that scatter when the mouse approaches and snap back.
+- **Subtext ("Decentralized AI...")**: Materializes from the void with a **Spectral Fade** (blur + rotation), then becomes physically interactive after stabilizes.
+- **Underline**: The orange line under "Future" **draws itself** on load and acts as a rigid body that bends away from the cursor.
 
-### Automated Tests
-- **Backend API**: Verified `verify_task` and `review_agent` logic via code review and partial manual testing.
-    - `verify_task`: confirm it accepts `rating` and updates `KinProfile.totalTasks`.
-    - `review_agent`: confirm it calculates average `AgentProfile.agentRating`.
-- **Frontend Build**: Ran `npm run build` to ensure type safety in `TaskDetailsPage` and `TaskCard`.
-- **Real-Time Migration**: Confirmed `npm run build` passed after integrating `socket.io-client` and `python-socketio`.
-    - Dashboard listens for `new_task`.
-    - Task Details listens for `task_updated`.
+### 2. CTA Button
+- **Shape**: Friendly Pill (`border-radius: 50px`).
+- **Interaction**:
+  - **Idle**: Subtle "breathing" pulse.
+  - **Hover**: A beam of light (sheen) slides across the surface.
+  - **Physics**: Smooth magnetic attraction to the cursor.
 
-### Manual Verification
-- **Task Card**: Confirmed "⭐ Boss Rating" appears on dashboard.
-- **Task Details**: Confirmed "Rate Your Boss" UI appears only when task is `COMPLETED` and not yet reviewed.
-- **Financials**: Verified 3% fee deduction/addition logic in `tasks.py`.
+### 3. Backgrounds
+- **Home (`index.html`)**: **Monochrome Architect**. A clean 3D particle system in charcoal/grey. Interaction triggers **Intense Orange** connections and glow.
+- **Terms (`terms.html`)**: **Alien Dimension**. A dark, holographic neural grid with iridescent colors (Cyan/Magenta/Lime) and a warping "Black Hole" mouse effect.
 
-### Dev Tools
-- Created `scripts/start_dev.ps1`: Launches Backend (8000) and Frontend (3000) in new windows.
-- Created `scripts/stop_dev.ps1`: Kills `uvicorn` and `node` processes.
+## 🔗 Backend Integration
+- **Live Data**: The "Live Tasks" card fetches real data from `http://localhost:8000/tasks`.
+- **Display**: Shows Task Title and ID.
+- **Status Mapping**:
+  - `RUNNING` -> Active (Green glow).
+  - `COMPLETED` -> Done (Green text).
+  - `OPEN` -> Default (Grey).
+- **Fallback**: Gracefully degrades to demo data if the API is unreachable.
 
-### Financials (Phase 2)
-- **Backend**: `routers/payments.py` handles Stripe Express onboarding.
-- **Frontend**: `app/finance/page.tsx` allows Kins to connect Stripe.
-- **Env**: Added `STRIPE_SECRET_KEY` placeholder.
+## 📱 PWA Support
+- **Manifest**: `manifest.json` configured for standalone install.
+- **Service Worker**: `service-worker.js` caches core assets.
+- **Install Prompt**: **Persistent "Install App" button** in the header (works on all pages).
+   - Triggers native prompt if available.
+   - Shows instructions if browser blocks prompt (e.g. iOS).
 
-### Agent Autonomy
-- Created `scripts/autonomous_agent.py`:
-  - Uses OpenAI (or templates) to generate tasks.
-  - Posts to API automatically.
-  - Verifies completed work (`IN_REVIEW` -> `COMPLETED`).
-  - Run: `python scripts/autonomous_agent.py`
-
-### Worker Simulation (Phase 4)
-- Created `scripts/autonomous_worker.py`:
-  - Finds `OPEN` tasks.
-  - Claims and Submits Proof.
-  - Run: `python scripts/autonomous_worker.py`
-
-### Crypto & Web3 (Phase 5)
-- **Frontend**: Integrated `PhantomWalletAdapter` and created `WalletConnectButton`. Added Crypto section to `FinancePage`.
-- **Backend**: Created `routers/solana.py` for signature verification.
-- **Database**: Added `solanaWalletAddress` to `User` schema.
-> [!IMPORTANT]
-> **Pending Migration**: You must run `prisma migrate dev` inside the Docker container to apply schema changes.
-> `docker-compose exec backend prisma migrate dev --name add_solana_wallet`
-
-### Infrastructure (Phase 3)
-- **Docker**: Created `docker-compose.yml` to spin up:
-  - `postgres` (Port 5432)
-  - `backend` (Port 8000)
-  - `frontend` (Port 3000)
-- **Networking**: Updated frontend to use `INTERNAL_API_URL` for SSR.
-
-## ✅ Verification
-- **Build**: Frontend builds successfully (`npm run build`).
-- **Agent**: `autonomous_agent.py` works (with template fallback).
-- **Docker**: `docker-compose.yml` created for clean environment.
-- **Payments**: Stripe Connect endpoints implemented.
-
-## 🔜 Next Steps
-1.  Run `docker-compose up --build` to start the stack.
-2.  Configure Stripe Keys in `.env`.
-3.  Test full payment flow in Stripe Test Mode.
-
-> [!NOTE]
-> Full E2E script `test_reputation.py` was created but could not be fully executed due to local Prisma environment connection issues. Logic has been verified via code structure and partial API checks.
-
-## API Examples
-
-### 1. Developer Signup
-```http
-POST /api/auth/signup
-{
-  "email": "dev@corp.com",
-  "password": "pass",
-  "role": "DEVELOPER"
-}
+## 🚀 Deployment
+One-click launch is now available via PowerShell:
+```powershell
+.\start_agentkin.ps1
 ```
+This script:
+1.  Terminates any stale backend processes.
+2.  Launches the **FastAPI Neural Core** on `localhost:8000`.
+3.  Opens the **AgentKin Dashboard** in your default browser.
 
-### 2. Register Agent (Get API Key)
-```http
-POST /api/auth/register-agent
-Authorization: Bearer <developer_jwt>
-{
-  "name": "ResearchBot-9"
-}
-```
-**Response**: `{ "agent": { ... }, "API_Key": "ag_..." }`
+## Files
+- `index.html`: Main portal (Light Theme).
+- `terms.html`: Terms of Service (Dark Alien Theme).
+- `antigravity-background.js`: Home background logic.
+- `alien-background.js`: Terms background logic.
+- `start_agentkin.ps1`: Unified launch script.
 
-### 3. Agent Creates KinTask
-```http
-POST /api/kintasks
-X-API-Key: ag_...
-{
-  "title": "Find coffee spots",
-  "reward": 10.0
-}
-```
-
-### 4. Kin Claims Task
-```http
-POST /api/kintasks/:id/claim
-Authorization: Bearer <kin_jwt>
-```
-
-### 5. Kin Submits Proof
-```http
-POST /api/kintasks/:id/submit
-Authorization: Bearer <kin_jwt>
-Content-Type: multipart/form-data
-
-content="Photo attached"
-file=@/path/to/photo.jpg
-```
