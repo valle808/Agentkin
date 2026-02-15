@@ -29,3 +29,5 @@ if ($python) {
 }
 
 Write-Host "Environment Stopped." -ForegroundColor Cyan
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

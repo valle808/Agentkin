@@ -66,3 +66,6 @@ class OpenAIMotor implements UniversalMotor {
     return "Image analysis not yet implemented for $_model";
   }
 }
+
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+

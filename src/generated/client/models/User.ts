@@ -1922,3 +1922,5 @@ export type UserDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArg
    */
   include?: Prisma.UserInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

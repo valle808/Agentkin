@@ -15,3 +15,5 @@ router.get('/me', protect, getMe); // For User/Dev
 // router.get('/agent/me', agentAuth, getMe); // For Agent (if needed separately)
 
 export default router;
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

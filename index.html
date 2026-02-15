@@ -50,17 +50,18 @@
         }
 
         body.ghost-active {
-            filter: contrast(1.1);
+            /* filter: contrast(1.1); REMOVED to fix position:fixed context */
             --bg-primary: #050505;
-            --bg-surface: rgba(20, 20, 20, 0.4);
-            /* Transparent Surface */
-            --bg-overlay: rgba(10, 10, 10, 0.7);
-            --text-primary: #00FF00;
-            /* Matrix Green? Or Neon */
-            --text-secondary: #008800;
-            --border-subtle: #003300;
+            --bg-surface: rgba(20, 20, 20, 0.6);
+            /* Slightly more opaque */
+            --bg-overlay: rgba(10, 10, 10, 0.8);
+            --text-primary: #F0F0F0;
+            /* High contrast white for readability */
+            --text-secondary: #B0B0B0;
+            /* Light grey for secondary text */
+            --border-subtle: #333333;
             background: #050505;
-            color: #00FF00;
+            color: #F0F0F0;
         }
 
         /* Ensure canvas is visible behind cards */
@@ -258,9 +259,15 @@
         }
 
         .hero .highlight {
-            color: var(--accent-primary);
+            color: #FF4D00;
+            /* Force Orange */
             position: relative;
-            display: inline-block
+            display: inline-block;
+            transition: color 0.3s;
+        }
+
+        .hero .highlight:hover {
+            color: #000000 !important;
         }
 
         /* REAL DOM UNDERLINE */
@@ -1059,3 +1066,4 @@
 </body>
 
 </html>
+<!-- # Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics -->

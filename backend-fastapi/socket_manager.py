@@ -65,6 +65,13 @@ async def ghost_task_complete(sid, data):
         await sio.emit('session_wiped', {'taskId': task_id, 'status': 'MEM_WIPE_SUCCESS'})
         print(f"Ghost Session {task_id} WIPED from memory.")
 
+async def broadcast_log(log_data):
+    """
+    Broadcasts a log message to all connected clients.
+    log_data: { 'message': str, 'source': str, 'level': str, 'timestamp': str }
+    """
+    await sio.emit('agent_log', log_data)
+
 #   ____                    _         _                
 #  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
 # | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     
@@ -78,3 +85,4 @@ async def ghost_task_complete(sid, data):
 #                 |___/    
 #
 # Sergiio Valle Bastidas - valle808@hawaii.edu
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

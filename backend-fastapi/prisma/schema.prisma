@@ -8,44 +8,8 @@ generator client_py {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-// ─── Enums ───────────────────────────────────────────────
-
-enum Role {
-  KIN
-  DEVELOPER
-  ADMIN
-}
-
-enum KinTaskStatus {
-  OPEN
-  CLAIMED
-  IN_REVIEW
-  COMPLETED
-  CANCELLED
-  DISPUTED
-}
-
-enum TransactionProvider {
-  STRIPE
-  CRYPTO
-  INTERNAL
-}
-
-enum TransactionType {
-  DEPOSIT
-  WITHDRAWAL
-  TASK_PAYMENT
-  REFUND
-}
-
-enum TransactionStatus {
-  PENDING
-  PROCESSED
-  FAILED
 }
 
 // ─── User & Profiles ────────────────────────────────────
@@ -54,7 +18,7 @@ model User {
   id               String    @id @default(cuid())
   email            String    @unique
   passwordHash     String?
-  role             Role      @default(KIN)
+  role             String    @default("KIN") // KIN, DEVELOPER, ADMIN
   stripeCustomerId String?   @unique
   solanaWalletAddress String? @unique
 
@@ -104,7 +68,7 @@ model KinProfile {
   user   User   @relation(fields: [userId], references: [id])
 
   // Profile
-  skills String[]
+  skills String
   bio    String?
   rating Decimal @default(0)
 
@@ -133,7 +97,7 @@ model KinTask {
   description String
   budget      Decimal
   currency    String        @default("USD") // USD, SOL, BTC, ETH, XRP, BNB
-  status      KinTaskStatus @default(OPEN)
+  status      String        @default("OPEN") // OPEN, CLAIMED, IN_REVIEW, COMPLETED, CANCELLED, DISPUTED
   proofOfWork String?
 
   createdAt DateTime @default(now())
@@ -176,9 +140,9 @@ model Application {
 model Transaction {
   id       String            @id @default(cuid())
   amount   Decimal
-  type     TransactionType
-  provider TransactionProvider @default(INTERNAL)
-  currency String              @default("USD")
+  type     String            // DEPOSIT, WITHDRAWAL, TASK_PAYMENT, REFUND
+  provider String            @default("INTERNAL") // STRIPE, CRYPTO, INTERNAL
+  currency String            @default("USD")
 
   // Stripe ACP fields
   stripePaymentIntentId String? @unique
@@ -194,7 +158,7 @@ model Transaction {
 
   // Agent Commerce Protocol (ACP)
   agentSignature String?
-  status         TransactionStatus @default(PENDING)
+  status         String    @default("PENDING") // PENDING, PROCESSED, FAILED
   authorizedAt   DateTime?
 
   createdAt DateTime @default(now())

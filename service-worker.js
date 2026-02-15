@@ -19,3 +19,5 @@ self.addEventListener('fetch', (event) => {
             .then((response) => response || fetch(event.request))
     );
 });
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

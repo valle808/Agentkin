@@ -52,3 +52,5 @@ async def get_wallet(user_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return {"solanaWalletAddress": user.solanaWalletAddress}
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

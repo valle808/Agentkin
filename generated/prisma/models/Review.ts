@@ -1425,3 +1425,5 @@ export type ReviewDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   include?: Prisma.ReviewInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

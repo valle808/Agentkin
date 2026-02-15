@@ -156,22 +156,75 @@ A marketplace where AI agents ("Agents") post tasks for human workers ("Kin"). A
 #### [NEW] [.gitignore](file:///c:/xampp/htdocs/agentkin/.gitignore)
 - Ignore `venv`, `node_modules`, `.env`, `__pycache__`.
 
-## Verification Plan
-### Live AI Test
-- Post a task "Explain Quantum Computing".
-- Verify response comes from *real* Gemini/OpenAI (check console logs for "Real Call").
+## Phase 16: Deep Intelligence Upgrade (Completed)
+- **Goal**: Make the Autonomous Worker smart. It will read news and create *actual* tasks using Gemini Pro.
+- **Goal**: Initialize the mobile app UI.
 
+## Phase 17: Sensorium Upgrade (Current)
+- **Goal**: Enable Voice Interaction (Talk to Agent).
+- **Goal**: Give Agent "Vision" (Multimodal Input).
 
+## Proposed Changes
+### [Frontend]
+#### [NEW] [frontend/src/components/VoiceInput.tsx](file:///c:/xampp/htdocs/agentkin/frontend/src/components/VoiceInput.tsx)
+- Browser `SpeechRecognition` API.
+- Visualizer (Audio Waveform).
 
----
+#### [MODIFY] [frontend/src/app/page.tsx](file:///c:/xampp/htdocs/agentkin/frontend/src/app/page.tsx)
+- Integrate Voice Input into Hero section.
 
-## Tech Stack
-- **Runtime**: Python 3.12 (Backend) / Node.js (Frontend)
-- **ORM**: Prisma (PostgreSQL)
-- **Payments**: Stripe (ACP + SPT)
-- **Real-time**: Socket.IO (python-socketio + socket.io-client)
+## Phase 18: Swarm Visualization (Current)
+- **Goal**: See what the Agent is thinking in real-time.
+- **Tech**: WebSockets + xterm.js (or simple div).
 
-## Infrastructure
-- **Containerization**: Docker Compose
-- **Database**: PostgreSQL 15 (Containerized)
-- **Services**: Frontend, Backend, Database
+## Proposed Changes
+### [Backend]
+#### [MODIFY] [backend-fastapi/socket_manager.py](file:///c:/xampp/htdocs/agentkin/backend-fastapi/socket_manager.py)
+- Add Log Broadcasting.
+
+### [Frontend]
+#### [NEW] [frontend/src/components/AgentTerminal.tsx](file:///c:/xampp/htdocs/agentkin/frontend/src/components/AgentTerminal.tsx)
+- Displays live logs from the swarm.
+
+## Phase 19: Dashboard Vitality (Live Data)
+- **Goal**: Make the dashboard feel alive and reactive.
+- **Tech**: WebSockets + REST + CSS Animations.
+
+## Proposed Changes
+### [Backend]
+#### [MODIFY] [backend-fastapi/routers/tasks.py](file:///c:/xampp/htdocs/agentkin/backend-fastapi/routers/tasks.py)
+- Emit `new_task` event on POST.
+
+### [Frontend]
+#### [MODIFY] [frontend/src/app/page.tsx](file:///c:/xampp/htdocs/agentkin/frontend/src/app/page.tsx)
+- Fetch `/metrics` on load.
+- Listen for `new_task` in a `useSocket` hook (or existing logic).
+- Fetch Crypto prices.
+
+## Proposed Changes
+### [Backend]
+#### [MODIFY] [scripts/autonomous_worker.py](file:///c:/xampp/htdocs/agentkin/scripts/autonomous_worker.py)
+- Import `google.generativeai`.
+- Fetch article content (if possible) or just analyze title/url.
+- Use Gemini to generate: `{"title": "...", "description": "...", "budget": ...}`.
+
+### [Mobile]
+#### [New] [agentkin-core/lib/main.dart](file:///c:/xampp/htdocs/agentkin/agentkin-core/lib/main.dart)
+- Basic Flutter app with Ghost Mode toggle.
+
+## Phase 23: Autonomous Execution Loop
+- **Goal**: Enable the worker to *perform* tasks.
+- **Implementation**:
+  - `autonomous_worker.py`: `perform_work()` function.
+  - Logic: Find task -> Claim -> Summarize URL (Gemini) -> Submit Proof.
+
+## Phase 24: Visual Polish
+- **Goal**: Address user design requests.
+- **Implementation**:
+  - `page.tsx`: Interactive "Future" text with per-char hover.
+
+## Phase 25: The Feedback Loop (Reputation)
+- **Goal**: Agents should review human work and release payments.
+- **Implementation**:
+  - `autonomous_worker.py`: scan for `IN_REVIEW` tasks -> Verify & Rate.
+  - `page.tsx`: Show "Completed" tasks in the feed (Status update).

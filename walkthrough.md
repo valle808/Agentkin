@@ -78,7 +78,50 @@ The site features advanced, mouse-reactive physics to create a living digital en
     - `Navbar.tsx`: Integrated Ghost Mode toggle and Wallet Connect.
 - **State**: Implemented `GhostContext` for global visual state management.
 
+### Phase 13: Cloud Readiness
+- **Docker**: Containerized `backend-fastapi` with Python 3.11-slim.
+- **Config**: Added `railway.toml` for seamless backend deployment.
+- **Git**: Initialized repository with `.gitignore` covering Next.js, Python, and Flutter (`agentkin-core`).
+
+### Phase 14: Visual Mastery
+- **Cursor**: Restored custom glowing cursor ("Green Matrix Dot") for Ghost Mode.
+- **Glassmorphism**: Unified transparency across Dashboard and Log Console.
+
 - **Version Control**: Git repository initialized and secured.
+
+### Phase 15: Ecosystem Documentation
+- **Master Guide**: Rewrote `README.md` to cover Next.js, FastAPI, and Mobile components.
+- **Deployment**: Added `DEPLOY.md` with Vercel/Railway instructions.
+- **Mobile**: Initialized `agentkin-core` documentation.
+
+### Phase 16: Deep Intelligence & Mobile
+- **AI Upgrade**: Upgraded `autonomous_worker.py` to use **Gemini Pro** for real-time news analysis.
+- **Mobile Foundation**: Built Flutter App (`agentkin-core`) with:
+    - **Riverpod** State Management.
+    - **Ghost Mode** Toggle & Theming.
+    - **AlienBackground** (CustomPainter).
+
+### Phase 18: Swarm Visualization
+- Implemented `AgentTerminal.tsx` to visualize backend logs.
+
+### Phase 19: Dashboard Vitality
+- Connected Dashboard cards to Live Data.
+- Implemented Market Simulation for Assets.
+
+### Phase 20: Mobile Companion
+- Built Flutter Dashboard (`dashboard.dart`).
+- Configured API connectivity for Android Emulator (`10.0.2.2`).
+
+### Phase 23: Autonomous Execution Loop
+- Upgraded `autonomous_worker.py` to also **perform** and **verify** tasks (Feedback Loop).
+- Agents now rate the Kin (Worker) upon completion.
+
+### Phase 26: Signature & Polish (Verified)
+- **Signature Hotfix**: Patched invalid comment syntax (`#` -> `//`) across 14 source files using `hotfix_signatures.py`.
+- **Dependency Isolation**: Removed corrupted root `node_modules` and renamed root `package-lock.json` to prevent build conflicts.
+- **Production Build**: Verified Frontend build (`npm run build`) with **Exit Code 0**.
+- **Privacy Page**: Added `/privacy` route to complete the footer links.
+- **Diagnostics**: Created `scripts/check_flutter.ps1` for environment diagnostics.
 
 ## 🚀 Deployment
 One-click launch is now available via PowerShell:

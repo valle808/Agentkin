@@ -10,3 +10,5 @@ export const config = {
   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   env: process.env.NODE_ENV || 'development',
 };
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

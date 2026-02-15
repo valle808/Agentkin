@@ -1490,3 +1490,5 @@ export type PrismaAction =
  */
 export type TransactionClient = Omit<DefaultPrismaClient, runtime.ITXClientDenyList>
 
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

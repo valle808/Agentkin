@@ -52,3 +52,5 @@ async def connect_db():
 async def disconnect_db():
     if db.is_connected():
         await db.disconnect()
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

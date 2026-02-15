@@ -1906,3 +1906,5 @@ export type TransactionDefaultArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   include?: Prisma.TransactionInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

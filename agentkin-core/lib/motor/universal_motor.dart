@@ -22,3 +22,6 @@ abstract class UniversalMotor {
   /// Initializes the motor with API keys or config
   Future<void> initialize(Map<String, dynamic> config);
 }
+
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+

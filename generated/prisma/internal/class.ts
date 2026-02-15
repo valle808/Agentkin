@@ -260,3 +260,5 @@ export interface PrismaClient<
 export function getPrismaClientClass(): PrismaClientConstructor {
   return runtime.getPrismaClient(config) as unknown as PrismaClientConstructor
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

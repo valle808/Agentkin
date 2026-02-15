@@ -40,3 +40,6 @@ class EncryptionService {
 
   // TODO: Add ECDH (SEA) Key Exchange logic for sharing AES keys
 }
+
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+

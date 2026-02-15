@@ -166,3 +166,5 @@ export const verifyTask = async (req: AuthRequest, res: Response, next: NextFunc
         next(error);
     }
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

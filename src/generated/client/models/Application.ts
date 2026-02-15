@@ -1557,3 +1557,5 @@ export type ApplicationDefaultArgs<ExtArgs extends runtime.Types.Extensions.Inte
    */
   include?: Prisma.ApplicationInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

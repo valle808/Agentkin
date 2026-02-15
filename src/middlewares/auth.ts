@@ -59,3 +59,5 @@ export const agentAuth = async (req: AuthRequest, res: Response, next: NextFunct
         return next(new AppError('Authentication failed', 401));
     }
 };
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

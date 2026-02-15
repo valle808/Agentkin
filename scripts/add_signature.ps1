@@ -141,3 +141,5 @@ foreach ($f in $batFiles) {
 }
 
 Write-Host "`nSignature added to all key files."
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

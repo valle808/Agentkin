@@ -15,3 +15,5 @@ router.post('/:id/claim', protect, claimTask); // Claim task
 router.post('/:id/submit', protect, upload.single('proof'), submitProof); // Submit proof of work
 
 export default router;
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

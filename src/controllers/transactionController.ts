@@ -107,3 +107,5 @@ export const authorizePayment = async (req: Request, res: Response): Promise<voi
         res.status(500).json({ error: error.message || 'Internal Server Error' });
     }
 };
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -83,6 +83,28 @@ async def get_debug_api_key():
     
     return {"api_key": agent.API_Key, "agent_id": agent.id}
 
+from pydantic import BaseModel
+
+class LogMessage(BaseModel):
+    message: str
+    source: str
+    level: str
+    timestamp: str
+
+@router.post("/logs")
+async def broadcast_system_log(log: LogMessage):
+    """
+    接收 Log 并广播 to Frontend (via WebSocket).
+    """
+    try:
+        # Import lazily to avoid circular dep if system imported by main
+        from socket_manager import broadcast_log
+        await broadcast_log(log.dict())
+        return {"status": "broadcast_ok"}
+    except Exception as e:
+        print(f"Broadcast Error: {e}")
+        return {"status": "error", "details": str(e)}
+
 #   ____                    _         _                
 #  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
 # | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     
@@ -96,3 +118,4 @@ async def get_debug_api_key():
 #                 |___/    
 #
 # Sergiio Valle Bastidas - valle808@hawaii.edu
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

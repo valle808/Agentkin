@@ -25,3 +25,5 @@ app.use('/api/transactions', transactionRoutes);
 app.use(errorHandler);
 
 export default app;
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -23,9 +23,16 @@ Start-Sleep -Seconds 5
 Write-Host "Activating Autonomous Intelligence..." -ForegroundColor Cyan
 Start-Process -FilePath $VenvPython -ArgumentList "scripts/autonomous_worker.py" -WorkingDirectory "C:\xampp\htdocs\agentkin" -WindowStyle Minimized
 
-# 4. Open Application
+# 4. Start Next.js Frontend
+Write-Host "Igniting Interface (Next.js)..." -ForegroundColor Magenta
+Start-Process -FilePath "npm" -ArgumentList "run dev" -WorkingDirectory "C:\xampp\htdocs\agentkin\frontend" -WindowStyle Minimized
+
+# 5. Open Application
 Write-Host "Opening Dashboard..." -ForegroundColor Yellow
-Start-Process "http://localhost/agentkin/index.html"
+Start-Sleep -Seconds 5
+Start-Process "http://localhost:3000"
 
 Write-Host "✅ System Online." -ForegroundColor Green
-Read-Host "Press Enter to exit launcher (Server will keep running in background)..."
+Read-Host "Press Enter to exit launcher (Servers will keep running in background)..."
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

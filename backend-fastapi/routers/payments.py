@@ -145,3 +145,5 @@ async def stripe_webhook(request: Request):
         pass
 
     return {"status": "success"}
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -93,3 +93,5 @@ async def login(creds: UserLogin):
         "role": user.role,
         "name": user.name
     }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

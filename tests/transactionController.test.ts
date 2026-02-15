@@ -86,3 +86,5 @@ describe('authorizePayment', () => {
         expect(mockResponse.json).toHaveBeenCalledWith({ error: 'Invalid Agent API Key' });
     });
 });
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

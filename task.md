@@ -87,17 +87,76 @@
     - [x] Update `cms.html`: Handle User vs Agent roles.
 - [x] **Backend**:
     - [x] Created `routers/auth.py`: `/register`, `/login` endpoints.
-## Phase 13: Cloud Deployment (Current)
-- [ ] **Containerization**:
-    - [ ] Create `backend-fastapi/Dockerfile`.
-    - [ ] Create `backend-fastapi/railway.toml`.
-- [ ] **Version Control**:
-    - [ ] Create/Update `.gitignore`.
-    - [ ] Initialize Git repository.
-- [ ] **Launch**:
-    - [ ] Commit code.
-    - [ ] Guide user to push to GitHub.
 
+## Phase 16: Deep Intelligence & Mobile (Completed)
+- [x] **Autonomous Worker**:
+    - [x] Integrate `google.generativeai` (Gemini Pro).
+    - [x] Implement "Read & analyze" logic for HN stories.
+    - [x] Generate structured Task JSON from content.
+- [x] **Mobile App**:
+    - [x] Create `agentkin-core/lib/main.dart` (Flutter Shell).
+    - [x] Implement "Ghost Mode" toggle in Flutter.
+- [x] **Verification**:
+    - [x] SQLite Migration (Zero-Config Database).
+    - [x] Cleanup Legacy Scripts.
+- [x] **Bug Fixes**:
+    - [x] Fixed `index.html` Ghost Mode cursor (CSS Filter Stack Context).
 
+## Phase 17: Sensorium Upgrade (Voice & Vision)
+- [x] **Voice Interface**:
+    - [x] Implement `VoiceInput` component (Speech-to-Text).
+    - [x] Connect to Agent Chat (Task Creation).
+- [x] **Agent Persona**:
+    - [x] Add TTS (Text-to-Speech) output.
 
+## Phase 18: Swarm Visualization (Real-Time)
+- [x] **Backend**:
+    - [x] Run `autonomous_worker.py` (Gemini Pro).
+    - [x] Stream Agent Logs via WebSocket (POST /logs -> WS).
+- [x] **Frontend**:
+    - [x] Implement `AgentTerminal.tsx` (Matrix-style log view).
+    - [x] Connect to WebSocket.
+
+## Phase 19: Dashboard Vitality (Live Data)
+- [x] **Real-Time Assets**:
+    - [x] Fetch BTC/SOL prices (CoinGecko or simulated).
+    - [x] Animate price changes.
+- [x] **Live Metrics**:
+    - [x] Connect "Metrics" card to `/metrics` endpoint.
+- [x] **Task Feed**:
+    - [x] Wire "Live Tasks" card to WebSocket `new_task` events.
+    - [x] Update `page.tsx` with dynamic state.
+
+## Phase 20: Mobile Companion
+- [x] **Flutter Dashboard**:
+    - [x] Implement API fetching in `dashboard.dart`.
+    - [x] Connect to `http://10.0.2.2:8000` (Emulator Localhost).
+
+## Phase 22: Wallet Connection (Fix)
+- [x] **Dependencies**:
+    - [x] Verify `@solana/wallet-adapter-react-ui` in `package.json`.
+- [x] **Providers**:
+    - [x] Ensure `layout.tsx` or `_app.tsx` has `ConnectionProvider/WalletProvider`.
+- [x] **Component**:
+    - [x] Fix `WalletConnectButton.tsx` imports and styles.
+
+## Phase 23: Autonomous Execution Loop
+- [x] **Worker Upgrade**:
+    - [x] Implement `perform_work()` in `autonomous_worker.py`.
+    - [x] Fetch `OPEN` tasks and identify URL-based missions.
+    - [x] Use Gemini to analyze/summarize content.
+    - [x] Submit Proof of Work via API.
+
+## Phase 24: Visual Polish
+- [x] **Hero Text**:
+    - [x] Make "Future" text orange (`#FF4D00`).
+    - [x] Implement per-letter hover effect (Black on hover).
+
+## Phase 25: The Feedback Loop (Reputation)
+- [x] **Autonomous Management**:
+    - [x] `autonomous_worker.py`: Implement `manage_contracts()`.
+    - [x] Auto-verify `IN_REVIEW` tasks.
+    - [x] Auto-rate the Kin (Worker) using Gemini to generate feedback.
+- [x] **Frontend**:
+    - [x] Add "Recent Activity" (Completed Tasks) to the Dashboard Feed.
 

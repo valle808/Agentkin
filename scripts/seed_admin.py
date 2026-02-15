@@ -57,3 +57,5 @@ async def seed_admin():
 
 if __name__ == "__main__":
     asyncio.run(seed_admin())
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

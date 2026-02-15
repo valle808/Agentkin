@@ -29,3 +29,5 @@ server.listen(config.port, () => {
     console.log(`AgentKin Server running on port ${config.port}`);
     console.log(`Environment: ${config.env}`);
 });
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

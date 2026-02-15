@@ -17,3 +17,4 @@ export type * from './models/Transaction'
 export type * from './models/Review'
 export type * from './models/Message'
 export type * from './commonInputTypes'
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

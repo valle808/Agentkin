@@ -158,3 +158,5 @@ export const getMe = async (req: Request, res: Response, next: NextFunction) => 
         next(error);
     }
 };
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -9,3 +9,4 @@ module.exports = {
     ...tsJestTransformCfg,
   },
 };
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -1683,3 +1683,5 @@ export type AgentProfileDefaultArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   include?: Prisma.AgentProfileInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -2190,3 +2190,5 @@ export type KinTaskDefaultArgs<ExtArgs extends runtime.Types.Extensions.Internal
    */
   include?: Prisma.KinTaskInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

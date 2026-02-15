@@ -65,3 +65,6 @@ class OpenClawMotor implements UniversalMotor {
     return "Image analysis not yet implemented for OpenClaw";
   }
 }
+
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+

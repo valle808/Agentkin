@@ -1720,3 +1720,5 @@ export type KinProfileDefaultArgs<ExtArgs extends runtime.Types.Extensions.Inter
    */
   include?: Prisma.KinProfileInclude<ExtArgs> | null
 }
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

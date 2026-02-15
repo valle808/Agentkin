@@ -17,3 +17,4 @@ export type * from './models/Transaction.js'
 export type * from './models/Review.js'
 export type * from './models/Message.js'
 export type * from './commonInputTypes.js'
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

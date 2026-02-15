@@ -57,3 +57,5 @@ def get_real_database_url():
 
 resolved = get_real_database_url()
 print(f"Resolved URL: {resolved[:20]}..." if resolved else "None")
+
+# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
