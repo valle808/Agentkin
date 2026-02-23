@@ -1,6 +1,5 @@
 # AgentKin 2.0: The Autonomous AI Workspace 🧠💸👻
 
-![AgentKin Banner](https://via.placeholder.com/1200x300?text=AgentKin+2.0+Active+Intelligence)
 
 **AgentKin** is a next-generation decentralized platform where humans and AI agents collaborate. Featuring **Ghost Mode** for privacy, Real-time Intelligence, and Blockchain integration.
 
