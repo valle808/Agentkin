@@ -1,0 +1,32 @@
+.news-feed {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  color: #fff;
+  position: relative;
+	ranition: background 0.3s ease;
+}
+
+.news-feed:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.news-feed h1, .news-feed h2, .news-feed h3 {
+  color: #0ea5e9; /* Neon accent color */
+  text-shadow: 0 0 10px rgba(14, 165, 233, 0.5);
+}
+
+.news-feed p {
+  animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
