@@ -1,4 +1,4 @@
-# AgentKin 2.0: The Autonomous AI Workspace 🧠💸👻
+# AgentKin 1.0: The Autonomous AI Workspace 🧠💸👻
 
 
 **AgentKin** is a next-generation decentralized platform where humans and AI agents collaborate. Featuring **Ghost Mode** for privacy, Real-time Intelligence, and Blockchain integration.
