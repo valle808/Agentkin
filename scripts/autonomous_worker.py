@@ -24,10 +24,18 @@ else:
     print("[AGENT] ⚠️ WARNING: GEMINI_API_KEY not found. Intelligence restricted.")
 
 def log(msg, level="INFO"):
-    print(f"[AGENT] {msg}")
+    # Sanitize for Windows Console
+    try:
+        safe_msg = msg.encode('utf-8', 'replace').decode('utf-8', 'ignore') if isinstance(msg, str) else str(msg)
+        # Further safety for cp1252
+        safe_msg = safe_msg.encode('cp1252', 'replace').decode('cp1252', 'ignore')
+        print(f"[AGENT] {safe_msg}")
+    except:
+        print(f"[AGENT] (Message Encode Error)")
+
     try:
         requests.post(f"{API_BASE}/api/v1/logs", json={
-            "message": msg,
+            "message": str(msg), # JSON handles unicode fine
             "source": "autonomous_worker",
             "level": level,
             "timestamp": time.strftime("%H:%M:%S")
@@ -45,13 +53,23 @@ def get_agent_identity():
         return None
     return None
 
+def get_worker_identity():
+    """Fetches or creates a debug worker identity."""
+    try:
+        res = requests.get(f"{API_BASE}/debug/kin-profile")
+        if res.status_code == 200:
+            return res.json().get('kin_id')
+    except:
+        return None
+    return None
+
 def analyze_with_gemini(title, url):
     """Uses Gemini to generate a strategic task from the news."""
     if not GEMINI_KEY:
         return None
     
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-1.5-flash')
         prompt = f"""
         You are an autonomous AI agent in a decentralized workspace.
         Analyze this intelligence:
@@ -118,7 +136,8 @@ def fetch_and_post_task():
             task_title = f"Analyze: {title}"
             task_desc = f"Source: {url}. Manual analysis required."
             budget = random.randint(50, 150)
-            log("⚠️ Using heuristic fallback.")
+            print("DEBUG: Entering fallback logic")
+            log("[WARN] Using heuristic fallback.")
 
         # 3. Execution Phase (Post Task)
         payload = {
@@ -137,9 +156,9 @@ def fetch_and_post_task():
         res = requests.post(post_url, json=payload)
         
         if res.status_code == 200 or res.status_code == 201:
-            log(f"✅ TASK POSTED: {task_title} (${budget})")
+            log(f"[SUCCESS] TASK POSTED: {task_title} (${budget})")
         else:
-            log(f"❌ POST FAILED: {res.text}")
+            log(f"[ERROR] POST FAILED: {res.text}")
 
     except Exception as e:
         log(f"Error in cycle: {e}")
@@ -168,11 +187,14 @@ def perform_work():
             return
 
         task_id = target_task['id']
-        log(f"🤖 ACQUIRING TASK: {target_task['title']}")
+        log(f"[ACTION] ACQUIRING TASK: {target_task['title']}")
 
         # 3. Claim Task (As System Worker)
-        # We use a static ID for the 'Autonomous Swarm' worker
-        worker_id = "system_swarm_worker_01" 
+        worker_id = get_worker_identity()
+        if not worker_id:
+            log("Could not get worker identity.")
+            return
+
         claim_res = requests.post(f"{API_BASE}/api/v1/tasks/{task_id}/claim", json={"kin_id": worker_id})
         
         if claim_res.status_code != 200:
@@ -195,7 +217,7 @@ def perform_work():
         # Use Gemini to summarize/execute
         result_text = "Analysis Failed"
         if GEMINI_KEY:
-            model = genai.GenerativeModel('gemini-pro')
+            model = genai.GenerativeModel('gemini-1.5-flash')
             exec_prompt = f"""
             You are an expert analyst.
             TASK: {target_task['title']}
@@ -216,9 +238,9 @@ def perform_work():
         submit_res = requests.post(f"{API_BASE}/api/v1/tasks/{task_id}/submit", json={"proof": result_text})
         
         if submit_res.status_code == 200:
-            log(f"✅ MISSION COMPLETE: {target_task['title']}")
+            log(f"[SUCCESS] MISSION COMPLETE: {target_task['title']}")
         else:
-            log(f"❌ Submission Failed: {submit_res.text}")
+            log(f"[ERROR] Submission Failed: {submit_res.text}")
 
     except Exception as e:
         log(f"Worker Error: {e}")
@@ -265,9 +287,9 @@ def manage_contracts():
             res = requests.post(f"{API_BASE}/api/v1/tasks/{task_id}/verify", json=verify_payload)
             
             if res.status_code == 200:
-                log(f"💰 PAYMENT RELEASED: {t['title']} (Rating: {rating}/5)")
+                log(f"[PAYMENT] PAYMENT RELEASED: {t['title']} (Rating: {rating}/5)")
             else:
-                log(f"❌ Verification Failed: {res.text}")
+                log(f"[ERROR] Verification Failed: {res.text}")
 
     except Exception as e:
         log(f"Manager Error: {e}")
@@ -278,7 +300,7 @@ schedule.every(15).seconds.do(perform_work)
 schedule.every(30).seconds.do(manage_contracts)
 
 if __name__ == "__main__":
-    log("🚀 Autonomous Worker (Gemini-Enhanced) Online")
+    log("Autonomous Worker (Gemini-Enhanced) Online")
     log("Scanning frequency: 60s")
     
     # Run once immediately

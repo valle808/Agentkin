@@ -20,4 +20,4 @@ self.addEventListener('fetch', (event) => {
     );
 });
 
-# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

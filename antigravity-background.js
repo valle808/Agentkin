@@ -142,10 +142,12 @@
             init();
             if (canvas) canvas.style.display = 'block';
             particles = [];
-            for (let i = 0; i < CONFIG.particleCount; i++) particles.push(new Particle3D());
+            // Optimize particle count for mobile
+            const count = window.innerWidth < 768 ? Math.floor(CONFIG.particleCount / 2.5) : CONFIG.particleCount;
+            for (let i = 0; i < count; i++) particles.push(new Particle3D());
             document.addEventListener('mousemove', onMouseMove);
             animate();
-            console.log("Antigravity Mode: ENGAGED");
+            console.log("Antigravity Mode: ENGAGED (" + count + " particles)");
         },
         stop: function () {
             if (canvas) canvas.style.display = 'none';
@@ -157,4 +159,4 @@
 
 })();
 
-# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

@@ -12,10 +12,12 @@ from core.config import settings
 async def run_worker():
     print("🤖 AgentKin Autonomous Worker Starting...")
     await connect_db()
+    from socket_manager import emit_log
+    await emit_log("Neural Engine: ONLINE", "SUCCESS", "Worker")
     
     try:
         while True:
-            print("Scanning for OPEN tasks...")
+            # print("Scanning for OPEN tasks...")
             
             # Find tasks that are OPEN and have a targetMotor set
             tasks = await db.kintask.find_many(
@@ -27,21 +29,24 @@ async def run_worker():
             )
             
             if not tasks:
-                print("No tasks found. Sleeping 10s...")
+                # print("No tasks found. Sleeping 10s...")
                 await asyncio.sleep(10)
                 continue
                 
             task = tasks[0]
-            print(f"Executing Task [{task.id}]: {task.title} (Motor: {task.targetMotor})")
+            msg = f"Neural Scan: Found Task [{task.id}] - {task.title}"
+            print(msg)
+            await emit_log(msg, "INFO", "Scan")
             
             # Update to CLAIMED -> IN_PROGRESS
             await db.kintask.update(
                 where={'id': task.id},
                 data={'status': 'IN_PROGRESS'}
             )
+            await emit_log(f"Identity Lock: Task {task.id} set to IN_PROGRESS", "INFO", "Logic")
             
             # Simulate "Thinking" time
-            print(f"Agent is thinking about task {task.id}...")
+            await emit_log(f"Neural Core: Initializing {task.targetMotor} for prompt digestion...", "INFO", "Motor")
             await asyncio.sleep(2)
             
             # Execute Work
@@ -51,26 +56,33 @@ async def run_worker():
                     prompt=f"Task: {task.title}\nDetails: {task.description}"
                 )
                 
-                print(f"Task Execution Finished. Result length: {len(result)}")
+                # Update Task to IN_REVIEW (Submit Proof) via Logic Helper
+                # In a real distributed app, this would be an HTTP call. 
+                # Here we import and call the logic to trigger Side-Effects (Auto-Verify, Sockets)
+                from routers.tasks import submit_proof, SubmitProofRequest
+                from fastapi import BackgroundTasks
                 
-                # Update Task to IN_REVIEW (Submit Proof)
-                # Note: API might expect a separate /submit endpoint, but here we update DB directly for simulation speed
-                await db.kintask.update(
-                    where={'id': task.id},
-                    data={
-                        'status': 'IN_REVIEW',
-                        'proofOfWork': result
-                    }
-                )
-                print(f"Task {task.id} Submitted for Review.")
-                print(f"Task {task.id} Finalized.")
+                # We mock BackgroundTasks to trigger it immediately or just add to it
+                bg = BackgroundTasks()
+                await submit_proof(task.id, SubmitProofRequest(proof=result), bg)
+                
+                # Manually run bg tasks if not in a real FastAPI request context
+                for t in bg.tasks:
+                    if asyncio.iscoroutinefunction(t.func):
+                         await t.func(*t.args, **t.kwargs)
+                    else:
+                         t.func(*t.args, **t.kwargs)
+
+                await emit_log(f"Neural Pulse: Task {task.id} execution SUCCESS. Proof submitted & Auto-Verified.", "SUCCESS", "Worker")
                 
             except Exception as e:
-                print(f"Error executing task: {e}")
-                # Mark as OPEN again or FAILED?
+                err_msg = f"Neural Synapse Failure: {str(e)}"
+                print(err_msg)
+                await emit_log(err_msg, "ERROR", "Worker")
+                # Mark as OPEN again
                 await db.kintask.update(
                     where={'id': task.id},
-                    data={'status': 'OPEN'} # Retry later
+                    data={'status': 'OPEN'} 
                 )
             
             await asyncio.sleep(2)

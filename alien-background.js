@@ -210,10 +210,12 @@
             canvas.style.display = 'block';
             cursor.style.display = 'block';
             nodes = [];
-            for (let i = 0; i < CONFIG.nodeCount; i++) nodes.push(new Node());
+            // Optimize node count for mobile
+            const count = window.innerWidth < 768 ? Math.floor(CONFIG.nodeCount / 3) : CONFIG.nodeCount;
+            for (let i = 0; i < count; i++) nodes.push(new Node());
             animate();
             attachCursorEvents();
-            console.log("Alien Mode: ENGAGED");
+            console.log("Alien Mode: ENGAGED (" + count + " nodes)");
         },
         stop: function () {
             if (canvas) canvas.style.display = 'none';
@@ -226,4 +228,4 @@
 
 })();
 
-# Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics
+// Developed By Sergio Valle Bastidas | valle808@hawaii.edu | @Gi0metrics

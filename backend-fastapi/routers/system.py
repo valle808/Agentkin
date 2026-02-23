@@ -70,7 +70,7 @@ async def get_debug_api_key():
         if not user:
             user = await db.user.create(data={
                 'email': 'demo@agentkin.ai',
-                'password': 'demo',
+                'passwordHash': 'demo',
                 'name': 'Demo Agent'
             })
             

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../logic/ghost_state.dart';
 import 'alien_background_mobile.dart';
+import 'antigravity_background_mobile.dart';
 
 class GhostScaffold extends ConsumerWidget {
   final Widget body;

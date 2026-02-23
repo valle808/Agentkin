@@ -141,7 +141,16 @@ async def stripe_webhook(request: Request):
     # Handle events
     if event['type'] == 'account.updated':
         account = event['data']['object']
-        # Update status in DB if needed (e.g. details_submitted)
+        # Update status in DB if details_submitted is true
+        if account.get('details_submitted'):
+            connect_id = account.get('id')
+            kin = await db.kinprofile.find_unique(where={'stripeConnectAccountId': connect_id})
+            if kin:
+                await db.kinprofile.update(
+                    where={'id': kin.id},
+                    data={'stripeDetailsSubmitted': True}
+                )
+                print(f"Stripe Onboarding Complete for Kin: {kin.id} (Account: {connect_id})")
         pass
 
     return {"status": "success"}

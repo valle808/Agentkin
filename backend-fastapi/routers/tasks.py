@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
 from pydantic import BaseModel, Field
 from typing import Optional
+from decimal import Decimal
 from prisma_db import db
 from socket_manager import emit_new_task, emit_task_updated
 from prisma.models import AgentProfile
@@ -53,7 +54,7 @@ async def verify_agent(api_key: str) -> AgentProfile:
     return agent
 
 @router.post("/tasks", response_model=TaskResponse)
-async def create_task(request: CreateTaskRequest):
+async def create_task(request: CreateTaskRequest, background_tasks: BackgroundTasks):
     # 0. Validation
     if request.is_ghost_mode and not request.acknowledgement:
         raise HTTPException(status_code=400, detail="Ghost Mode requires legal acknowledgement.")
@@ -89,7 +90,7 @@ async def create_task(request: CreateTaskRequest):
     )
 
     # 4. Calculate Surcharge (3%) and Record Revenue
-    surcharge = request.budget * 0.03
+    surcharge = float(request.budget) * 0.03
     
     await db.platformrevenue.create(
         data={
@@ -142,7 +143,7 @@ from utils.motor_switcher import MotorSwitcher
 async def execute_task_motor(task_id: str):
     """
     Triggers the selected AI Motor to process the task description.
-    (Demonstration of Motor Switching)
+    (Demonstration of Motor Switching & Ghost Mode)
     """
     task = await db.kintask.find_unique(where={'id': task_id})
     if not task:
@@ -156,9 +157,31 @@ async def execute_task_motor(task_id: str):
             target_motor=motor_name,
             prompt=f"Execute this task: {task.title}\nDescription: {task.description}"
         )
+        
+        # When called as a background task, we must save the result!
+        await db.kintask.update(
+            where={'id': task_id},
+            data={
+                'status': 'IN_REVIEW',
+                'proofOfWork': result
+            }
+        )
+        
+        await emit_task_updated({
+            "id": task_id,
+            "status": "IN_REVIEW",
+            "proofOfWork": result,
+            "executor": motor_name
+        })
+
+        # Try to auto-verify
+        await auto_verify_small_ai_tasks(task_id)
+
         return {"status": "executed", "motor": motor_name, "result": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Error in execute_task_motor: {e}")
+        # Not throwing HTTPException because it's often a background task now
+        return {"status": "failed", "error": str(e)}
 
 @router.get("/tasks", response_model=list[dict])
 async def list_tasks(status: str = 'OPEN', agent_id: Optional[str] = None):
@@ -253,13 +276,13 @@ class SubmitProofRequest(BaseModel):
     proof: str
 
 @router.post("/tasks/{task_id}/submit", response_model=dict)
-async def submit_proof(task_id: str, request: SubmitProofRequest):
+async def submit_proof(task_id: str, request: SubmitProofRequest, background_tasks: BackgroundTasks):
     # Check if task is claimed
     task = await db.kintask.find_unique(where={'id': task_id})
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
-    if task.status != 'CLAIMED':
-        raise HTTPException(status_code=400, detail="Task must be CLAIMED to submit proof")
+    if task.status != 'CLAIMED' and task.status != 'IN_PROGRESS':
+        raise HTTPException(status_code=400, detail="Task must be CLAIMED or IN_PROGRESS to submit proof")
 
     # Update
     updated_task = await db.kintask.update(
@@ -275,6 +298,9 @@ async def submit_proof(task_id: str, request: SubmitProofRequest):
         "status": updated_task.status,
         "proofOfWork": request.proof
     })
+
+    # Trigger Auto-Verify Check
+    background_tasks.add_task(auto_verify_small_ai_tasks, task_id)
 
     return {"status": "success", "task_status": updated_task.status}
 
@@ -296,7 +322,7 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
     # 1. Fetch Task & Kin Profile
     task = await db.kintask.find_unique(
         where={'id': task_id},
-        include={'kin': True}
+        include={'kin': True, 'agent': True}
     )
     
     if not task:
@@ -306,7 +332,7 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
     if task.status not in ['IN_REVIEW', 'CLAIMED']:
         raise HTTPException(status_code=400, detail="Task must be in review or claimed validation")
         
-    if not task.kin:
+    if not task.kin and not task.isGhostMode:
         raise HTTPException(status_code=400, detail="No Kin assigned to this task")
 
     # 3. Process Payment
@@ -318,7 +344,7 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
     if task.currency == "USD" and request.shared_payment_token and stripe.api_key:
         try:
             # ACP Logic (Same as before)
-            destination_account = task.kin.stripeConnectAccountId
+            destination_account = task.kin.stripeConnectAccountId if task.kin else None
             deduction = task.budget * 0.03
             
             intent_data = {
@@ -354,12 +380,16 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
         # Agent paid Budget + 3% (Theoretical). 
         # Actually in create_task we didn't verify the +3% deposit, but let's assume it arrived.
         # Payout to Kin = 97% of Budget.
-        payout_amount = float(task.budget) * 0.97
-        platform_fee = float(task.budget) * 0.03 # The deduction
+        budget_dec = Decimal(str(task.budget))
+        payout_amount = budget_dec * Decimal('0.97')
+        platform_fee = budget_dec * Decimal('0.03') # The deduction
         # The surcharge (another 3%) is already in the vault.
         
         print(f"[{task.currency}] Processing Payout for Task {task.id}")
-        print(f"  - Sending {payout_amount} {task.currency} to Kin (ID: {task.kin.id})")
+        if task.kin:
+            print(f"  - Sending {payout_amount} {task.currency} to Kin (ID: {task.kin.id})")
+        else:
+            print(f"  - Platform keeps 100% of {task.currency} (Ghost Mode Execution)")
         print(f"  - Platform keeps {platform_fee} {task.currency} + Surcharge")
         
         # TODO: Integrate x402/MintMCP here for actual signing if keys available
@@ -368,15 +398,19 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
 
     
     # 4. Update Database
+    recalc_required = False
     async with db.tx() as transaction:
         # Update Task
         # ... (same)
         
         # Record Revenue (3% from Payout)
-        deduction = task.budget * 0.03
+        budget_dec = Decimal(str(task.budget))
+        deduction = budget_dec * Decimal('0.03')
+        
+        print(f"DEBUG: Creating Revenue for task {task_id} amount {deduction}")
         await transaction.platformrevenue.create(
             data={
-                'amount': deduction,
+                'amount': float(deduction),
                 'source': 'TASK_PAYOUT_FEE',
                 'kinTaskId': task_id
             }
@@ -391,6 +425,7 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
         
         # Create Transaction Record
         # Check if transaction already exists?
+        print(f"DEBUG: Creating Transaction for user {task.agent.userId} task {task_id}")
         
         await transaction.transaction.create(
             data={
@@ -400,7 +435,7 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
                 'status': 'PROCESSED' if payment_status == 'succeeded' else 'PENDING',
                 'stripePaymentIntentId': stripe_id,
                 'sharedPaymentTokenId': request.shared_payment_token, # Store reference
-                'userId': task.agentId, # Payer
+                'userId': task.agent.userId, # Payer
                 'kinTaskId': task_id,
                 # 'currency': 'USD' # Default in schema
             }
@@ -418,40 +453,30 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
                 }
             )
             
-            # Recalculate Kin Reputation
-            # 1. Update totalTasks
-            # 2. Update rating (Weighted Avg)
-            kin_profile = await db.kinprofile.find_unique(where={'id': task.kin.id})
-            if kin_profile:
-                new_total = kin_profile.totalTasks + 1
-                # Simple moving average for now or weighted? 
-                # User asked: "recalculate the weighted average scores for both parties after every 5th transaction"
-                # For immediate feedback, let's update simplistic average now, or do the 5th transaction check.
-                # Let's do immediate update for responsiveness, or respect the "every 5th" rule?
-                # "Create a background function to recalculate... after every 5th transaction"
-                # I will implement a check: if new_total % 5 == 0, recalculate. 
-                # For now, let's just increment totalTasks.
-                
-                await db.kinprofile.update(
-                    where={'id': task.kin.id},
-                    data={
-                        'totalTasks': new_total,
-                        # 'kinRating': ... (TODO: Implement Recalc Logic)
-                    }
-                )
-                
-                if new_total % 5 == 0:
-                   # Trigger Recalculation (In-line for demo)
-                   # Fetch all reviews for this Kin
-                   # ... This might be heavy. Let's keep it simple for MVP: Update Average immediately.
-                   # Current Rating * (Total-1) + New Rating / Total
-                   current_rating = float(kin_profile.kinRating)
-                   new_rating = ((current_rating * kin_profile.totalTasks) + request.rating) / new_total
-                   
-                   await db.kinprofile.update(
-                       where={'id': task.kin.id},
-                       data={'kinRating': new_rating}
-                   )
+            # Recalculate Kin Reputation (Weighted Avg or Simple)
+            if task.kin:
+                kin_profile = await transaction.kinprofile.find_unique(where={'id': task.kin.id})
+                if kin_profile:
+                    new_total = kin_profile.totalTasks + 1
+                    
+                    if new_total % 5 == 0:
+                        # Trigger Deep Reputation Recalculation AFTER transaction
+                        recalc_required = True
+                    else:
+                        # Simple update for immediate feedback
+                        current_rating = float(kin_profile.kinRating) if kin_profile.kinRating else 5.0
+                        new_rating = ((current_rating * kin_profile.totalTasks) + request.rating) / new_total
+                        await transaction.kinprofile.update(
+                            where={'id': task.kin.id},
+                            data={
+                                'totalTasks': new_total,
+                                'kinRating': new_rating
+                            }
+                        )
+
+    # Perform Deep Recalc if needed (Outside Transaction)
+    if recalc_required and task.kin:
+        await recalculate_reputation(task.kin.id, "KIN")
 
     await emit_task_updated({
         "id": task_id,
@@ -465,6 +490,31 @@ async def verify_task(task_id: str, request: VerifyTaskRequest):
         "payment_status": payment_status,
         "amount_released": float(task.budget)
     }
+
+async def recalculate_reputation(profile_id: str, profile_type: str = "KIN", tx = None):
+    """
+    Performs a weighted recalculation of a user's reputation based on all reviews.
+    """
+    database = tx if tx else db
+    
+    if profile_type == "KIN":
+        # Average of all reviews where this kin was the worker
+        reviews = await database.review.find_many(
+            where={'kinTask': {'kinId': profile_id}}
+        )
+        if reviews:
+            avg = sum(r.rating for r in reviews) / len(reviews)
+            await database.kinprofile.update(where={'id': profile_id}, data={'kinRating': avg})
+            print(f"Deep Recalc: Kin {profile_id} rating updated to {avg}")
+    else:
+        # Average of all reviews for tasks created by this agent
+        reviews = await database.review.find_many(
+            where={'kinTask': {'agentId': profile_id}}
+        )
+        if reviews:
+            avg = sum(r.rating for r in reviews) / len(reviews)
+            await database.agentprofile.update(where={'id': profile_id}, data={'agentRating': avg})
+            print(f"Deep Recalc: Agent {profile_id} rating updated to {avg}")
 
 class ReviewAgentRequest(BaseModel):
     rating: int = Field(..., ge=1, le=5) # 1-5
@@ -486,7 +536,7 @@ async def review_agent(task_id: str, request: ReviewAgentRequest):
     # We use task.kin.userId as authorId.
     kin_profile = task.kin
     if not kin_profile:
-         raise HTTPException(status_code=400, detail="No Kin Profile found on task")
+         raise HTTPException(status_code=400, detail="No Kin assigned to this task (Ghost Mode tasks cannot review creators)")
          
     user_id = kin_profile.userId
     
@@ -499,35 +549,28 @@ async def review_agent(task_id: str, request: ReviewAgentRequest):
         }
     )
     
-    # Recalculate Agent Reputation (Simple Average of all reviews for this agent)
-    # Using raw SQL or fetching all reviews might be safer given Schema limitations on 'Review' target.
-    # But let's try to fetch via Prisma.
-    # Reviews for tasks created by this agent, where author is NOT the agent.
-    # Finding "reviews where kinTask.agentId == task.agentId AND authorId != task.agent.userId"
-    
-    agent_user_id = task.agent.userId
-    
-    reviews = await db.review.find_many(
-        where={
-            'kinTask': {
-                'agentId': task.agentId
-            },
-            'authorId': {
-                'not': agent_user_id
-            }
-        }
-    )
-    
-    total_rating = sum(r.rating for r in reviews)
-    count = len(reviews)
-    new_avg = total_rating / count if count > 0 else float(request.rating)
-    
-    await db.agentprofile.update(
-        where={'id': task.agentId},
-        data={'agentRating': new_avg}
-    )
+    # Recalculate Agent Reputation
+    await recalculate_reputation(task.agentId, "AGENT")
 
-    return {"status": "success", "new_agent_rating": new_avg}
+    return {"status": "success"}
+
+async def auto_verify_small_ai_tasks(task_id: str):
+    """
+    Automatically verifies and releases payment for tasks completed by AI Motors
+    if the budget is small (<= $5.00) or if the agent has auto-verify enabled.
+    """
+    task = await db.kintask.find_unique(where={'id': task_id})
+    if not task: return
+
+    # Only auto-verify AI Motor tasks with small budgets for now
+    if task.targetMotor and task.budget <= 5.0 and task.status == 'IN_REVIEW':
+        print(f"Auto-Verifying Task {task.id} (AI-to-AI, Small Budget)")
+        # Release payment with mock token
+        await verify_task(task_id, VerifyTaskRequest(
+            shared_payment_token="auto_verify_token",
+            rating=5,
+            comment="Managed by AgentKin Neural Core (Auto-Verified)"
+        ))
 
 #   ____                    _         _                
 #  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      

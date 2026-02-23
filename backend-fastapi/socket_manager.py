@@ -1,5 +1,6 @@
 import socketio
 import asyncio
+import datetime
 
 # Create a Socket.IO server within FastAPI
 sio = socketio.AsyncServer(
@@ -71,6 +72,24 @@ async def broadcast_log(log_data):
     log_data: { 'message': str, 'source': str, 'level': str, 'timestamp': str }
     """
     await sio.emit('agent_log', log_data)
+
+async def emit_log(message: str, level: str = "INFO", source: str = "System"):
+    """
+    Helper to emit logs with timestamp (Compatibility Wrapper)
+    """
+    await sio.emit('agent_log', {
+        'message': message,
+        'level': level,
+        'source': source,
+        'timestamp': datetime.datetime.now().isoformat()
+    })
+
+async def emit_remote_command(command: dict):
+    """
+    Broadcasts a remote command to all connected clients.
+    command: { 'action': str, 'target': Optional[str], 'value': Optional[Any] }
+    """
+    await sio.emit('remote_command', command)
 
 #   ____                    _         _                
 #  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      

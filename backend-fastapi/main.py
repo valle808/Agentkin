@@ -10,7 +10,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from prisma_db import connect_db, disconnect_db
-from routers import tasks, payments, solana, system, auth
+from routers import tasks, payments, solana, system, auth, chat, bridge, blog
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -43,6 +43,9 @@ app.include_router(payments.router, prefix="/api/v1", tags=["Payments"])
 app.include_router(solana.router, prefix="/api/v1", tags=["Solana"])
 app.include_router(system.router, prefix="/api/v1", tags=["System"])
 app.include_router(auth.router, prefix="/api/v1", tags=["Auth"])
+app.include_router(chat.router, prefix="/api/v1", tags=["Chat"])
+app.include_router(bridge.router, prefix="/api/v1", tags=["Bridge"])
+app.include_router(blog.router, prefix="/api/v1", tags=["Blog"])
 
 @app.get("/")
 async def root():
@@ -84,6 +87,7 @@ async def debug_kin_profile():
         user = await db.user.create(
             data={
                 'email': worker_email,
+                'name': 'Auto Worker',
                 'role': 'KIN'
             }
         )
@@ -93,7 +97,7 @@ async def debug_kin_profile():
         kin = await db.kinprofile.create(
             data={
                 'userId': user.id,
-                'skills': ['Automation', 'Python'],
+                'skills': 'Automation, Python',
                 'rating': 5.0
             }
         )

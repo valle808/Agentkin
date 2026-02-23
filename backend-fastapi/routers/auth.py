@@ -31,7 +31,7 @@ async def register(user: UserRegister):
     try:
         new_user = await db.user.create(data={
             'email': user.email,
-            'password': user.password, # NOTE: Hash in production
+            'passwordHash': user.password, # NOTE: Hash in production
             'name': user.name,
             'role': user.role.upper()
         })
@@ -66,7 +66,7 @@ async def register_wallet(data: WalletRegister):
     # Create
     new_user = await db.user.create(data={
         'email': fake_email,
-        'password': 'WALLET_LOGIN_NO_PASSWORD',
+        'passwordHash': 'WALLET_LOGIN_NO_PASSWORD',
         'name': f"Wallet User {data.address[:4]}",
         'role': data.role.upper()
     })
@@ -84,8 +84,20 @@ async def register_wallet(data: WalletRegister):
 
 @router.post("/login")
 async def login(creds: UserLogin):
+    print(f"DEBUG LOGIN: {creds.email} pw={creds.password}")
     user = await db.user.find_unique(where={'email': creds.email})
-    if not user or user.password != creds.password:
+    print(f"DEBUG USER FOUND: {user}")
+    
+    # Debug attributes
+    if user:
+        print(f"DEBUG USER DIR: {dir(user)}")
+        # Safe access to passwordHash
+        stored_hash = getattr(user, 'passwordHash', None) or getattr(user, 'password', None)
+        print(f"DEBUG STORED HASH: {stored_hash}")
+        
+        if stored_hash != creds.password:
+             raise HTTPException(401, "Invalid Credentials")
+    else:
         raise HTTPException(401, "Invalid Credentials")
     
     return {

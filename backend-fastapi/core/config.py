@@ -17,8 +17,15 @@ class PlatformConfig(BaseSettings):
     GEMINI_API_KEY: str = "AIza-placeholder"
     OPENCLAW_BASE_URL: str = "http://localhost:11434"
 
-    class Config:
-        env_file = ".env"
+    # External Services
+    DATABASE_URL: str = "file:./dev.db"
+    STRIPE_SECRET_KEY: str = "sk-placeholder"
+    STRIPE_WEBHOOK_SECRET: str = "whsec-placeholder"
+
+    model_config = {
+        "env_file": ".env",
+        "extra": "ignore"
+    }
 
 settings = PlatformConfig()
 

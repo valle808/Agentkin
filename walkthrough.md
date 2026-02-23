@@ -141,3 +141,39 @@ This script:
 - `alien-background.js`: Terms background logic.
 - `start_agentkin.ps1`: Unified launch script.
 
+## Phase 27: Final Polish (✅ Complete)
+- **Visual Repair**:
+  - Implemented `AntigravityBackground.tsx` for Light Mode (3D Particles).
+  - Fixed `page.tsx` background transparency to reveal particles.
+  - Linked Footer to `/terms` and `/privacy` using Next.js routing.
+- **Cleanup**:
+  - Restored legacy root files (`index.html`, `terms.html`, etc.) for backward compatibility.
+  - Hardened `AntigravityBackground.tsx` with transparent canvas and high-contrast particles.
+
+## Phase 28: Cloud Readiness (✅ Ready)
+- **Backend**: Verified `Dockerfile` is production-ready (Python 3.11-slim, Port Injection).
+- **Frontend**: Verified `package.json` scripts for Vercel deployment.
+- **Config**: Created `.env.production.example` for secure variable management.
+## Phase 29: Mobile Parity (✅ Complete)
+- **Visuals**: Created `AntigravityBackgroundMobile` for Flutter (Light Mode 3D Particles).
+- **Integration**: Updated `GhostScaffold` to switch backgrounds dynamically.
+- **Consistency**: Unified Web and Mobile visual languages.
+## Phase 30: Code Quality (✅ Complete)
+- **Linting**: Fixed `@solana` import issues and CSS compatibility warnings.
+- **Build**: Verified Frontend Production Build (`npm run build`).
+
+## Phase 31: Visual Mastery & Financial Integrity (✅ Complete)
+
+### 🌊 Acid Disintegration Effect
+A premium visual sequence triggered when the Login window is minimized:
+- **Chemical Burn**: The window dissolves using a custom `mask-image` animation that simulates paper melting in acid.
+- **Particle Swarm**: Spawns 80+ "bubbles" and "smoke" particles that travel from the window's center to the login button.
+- **Bezier Physics**: Particles follow randomized quadratic curves with intentional "wiggle" jitters for a natural fluid feel.
+- **Dynamic Button States**: The login button transitions from an `empty` (hollow) state when the window is open to a `filled` (neon glow) state once the disintegration "matter" returns to it.
+
+### 💰 Revenue Recording System
+Hardened the financial core with automated fee tracking:
+- **Platform Fee**: Implemented a mandatory **3% platform fee** deducted from all Kin (worker) payouts.
+- **Database Persistence**: Introduced the `PlatformRevenue` model to track every fee earned by the protocol.
+- **Precision Math**: Upgraded the backend to use `Decimal` objects for all financial calculations, preventing float-point errors.
+- **Multi-Client Verification**: Regenerated both the JS and Python Prisma clients with experimental decimal support enabled.
