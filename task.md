@@ -223,3 +223,7 @@
 - [x] **Security Sweep**: Ran `npm audit fix --force` and resolved all 6 critical/high vulnerabilities.
 - [x] **Production Verification**: Confirmed `npm run build` exits with Code 0.
 
+## Phase 34: Namecheap Cloud Pipeline (✅ Complete)
+- [x] **Programmatic FTP**: Built `scripts/deploy_namecheap.js` utilizing `basic-ftp` to automate node-agnostic static payload deployments.
+- [x] **Secure Templates**: Updated `.env.example` with explicit `NAMECHEAP_FTP_*` credentials architecture to protect sensitive connection strings.
+- [x] **NPM Configuration**: Injected `"deploy:namecheap"` macro directly into `package.json`.
