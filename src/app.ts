@@ -5,6 +5,7 @@ import authRoutes from './routes/authRoutes';
 import taskRoutes from './routes/taskRoutes';
 import transactionRoutes from './routes/transactionRoutes';
 import coinbaseRoutes from './routes/coinbaseRoutes';
+import sweepRoutes from './routes/sweepRoutes';
 
 const app = express();
 
@@ -22,6 +23,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/kintasks', taskRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/coinbase', coinbaseRoutes);
+app.use('/api/sweep', sweepRoutes);
 
 // Error Handling
 app.use(errorHandler);

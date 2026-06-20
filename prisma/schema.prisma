@@ -267,6 +267,23 @@ model PlatformRevenue {
   kinTask   KinTask? @relation(fields: [kinTaskId], references: [id])
 }
 
+// ─── Secrets Vault ──────────────────────────────────────────────────────────
+// Stores encrypted API keys, private keys, and wallet addresses.
+// Values are AES-256-GCM encrypted using VAULT_MASTER_KEY env var.
+// NEVER store plaintext secrets here.
+
+model EncryptedSecret {
+  id          String   @id @default(cuid())
+  key         String   @unique   // Logical name e.g. "COINBASE_API_KEY_NAME"
+  ciphertext  String             // AES-256-GCM encrypted value (base64)
+  iv          String             // Initialization vector (base64)
+  authTag     String             // GCM auth tag (base64)
+  category    String   @default("GENERAL") // COINBASE, WALLET, AI, AUTH
+  description String?            // Human-readable note
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
 //   ____                    _         _                
 //  / ___|_ __ ___  __ _  __| | ___   | |__  _   _      
 // | |   | '__/ _ \/ _` |/ _` |/ _ \  | '_ \| | | |     

@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AgentKin — Owner Sweep Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #050b14;
+      --surface: #0d1929;
+      --border: rgba(99, 179, 237, 0.15);
+      --accent: #63b3ed;
+      --accent2: #9f7aea;
+      --green: #48bb78;
+      --red: #fc8181;
+      --gold: #f6c90e;
+      --text: #e2e8f0;
+      --muted: #718096;
+      --radius: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background-image:
+        radial-gradient(ellipse at 20% 20%, rgba(99,179,237,0.07) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 80%, rgba(159,122,234,0.07) 0%, transparent 50%);
+    }
+
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      width: 100%;
+      max-width: 560px;
+      padding: 36px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.5);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .logo-icon {
+      width: 42px;
+      height: 42px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .logo-text { font-size: 18px; font-weight: 700; }
+    .logo-sub { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1.5px; margin-top: 2px; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 6px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .subtitle { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+
+    /* Steps */
+    .step { display: none; }
+    .step.active { display: block; }
+
+    label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+
+    input[type="password"],
+    input[type="text"],
+    select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 14px;
+      padding: 12px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 18px;
+    }
+
+    input:focus, select:focus { border-color: var(--accent); }
+
+    .btn {
+      width: 100%;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+    }
+
+    .btn-primary:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #e53e3e, #9b2c2c);
+      color: #fff;
+      margin-top: 12px;
+    }
+
+    .btn-danger:hover { opacity: 0.88; transform: translateY(-1px); }
+
+    .wallet-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .wallet-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .wallet-card:hover, .wallet-card.selected {
+      border-color: var(--accent);
+      background: rgba(99,179,237,0.08);
+    }
+
+    .wallet-card .symbol {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .wallet-card .addr {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      margin-bottom: 18px;
+      display: none;
+    }
+
+    .alert.show { display: block; }
+    .alert-error { background: rgba(252,129,129,0.1); border: 1px solid rgba(252,129,129,0.3); color: var(--red); }
+    .alert-success { background: rgba(72,187,120,0.1); border: 1px solid rgba(72,187,120,0.3); color: var(--green); }
+    .alert-info { background: rgba(99,179,237,0.1); border: 1px solid rgba(99,179,237,0.3); color: var(--accent); }
+
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+
+    .history-item:last-child { border-bottom: none; }
+
+    .history-amount {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--green);
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .token-timer {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--gold);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="panel">
+    <div class="logo">
+      <div class="logo-icon">🏛️</div>
+      <div>
+        <div class="logo-text">AgentKin</div>
+        <div class="logo-sub">Owner Sweep Dashboard</div>
+      </div>
+    </div>
+
+    <!-- STEP 1: Password -->
+    <div class="step active" id="step-auth">
+      <h2>Sweep Authorization</h2>
+      <p class="subtitle">Enter your owner password to initiate a fund sweep to Coinbase.</p>
+
+      <div id="alert-auth" class="alert"></div>
+
+      <label for="sweep-password">Owner Password</label>
+      <input type="password" id="sweep-password" placeholder="••••••••••••" autocomplete="off" />
+
+      <button class="btn btn-primary" id="btn-authorize">
+        <span>Verify Password</span>
+      </button>
+    </div>
+
+    <!-- STEP 2: Select currency & amount -->
+    <div class="step" id="step-sweep">
+      <h2>Configure Sweep</h2>
+      <p class="subtitle">Select currency and amount to sweep to your wallet.</p>
+
+      <div id="alert-sweep" class="alert"></div>
+      <div class="token-timer" id="token-timer">⏱ Token valid: 5:00</div>
+
+      <label>Select Destination Wallet</label>
+      <div class="wallet-cards">
+        <div class="wallet-card" onclick="selectCurrency('XRP', this)" data-currency="XRP">
+          <div class="symbol">⚡ XRP</div>
+          <div class="addr" id="addr-XRP">rw2ciyaN...WKQg</div>
+        </div>
+        <div class="wallet-card" onclick="selectCurrency('BTC', this)" data-currency="BTC">
+          <div class="symbol">₿ BTC</div>
+          <div class="addr" id="addr-BTC">3CJreF7L...ujh</div>
+        </div>
+        <div class="wallet-card" onclick="selectCurrency('SOL', this)" data-currency="SOL">
+          <div class="symbol">◎ SOL</div>
+          <div class="addr" id="addr-SOL">E1pAENVb...zTL</div>
+        </div>
+        <div class="wallet-card" onclick="selectCurrency('BNB', this)" data-currency="BNB">
+          <div class="symbol">🔶 BNB</div>
+          <div class="addr" id="addr-BNB">0xF765...dc9</div>
+        </div>
+      </div>
+
+      <label for="coinbase-account-id">Coinbase Account ID (from /api/coinbase/accounts)</label>
+      <input type="text" id="coinbase-account-id" placeholder="e.g. a1b2c3d4-..." />
+
+      <label for="sweep-amount">Amount</label>
+      <input type="text" id="sweep-amount" placeholder="e.g. 100.00" />
+
+      <button class="btn btn-danger" id="btn-execute">
+        <span>🚀 Execute Sweep</span>
+      </button>
+    </div>
+
+    <!-- STEP 3: Confirmation -->
+    <div class="step" id="step-done">
+      <h2>Sweep Complete ✅</h2>
+      <p class="subtitle">Funds have been transferred to your Coinbase wallet.</p>
+
+      <div id="alert-done" class="alert alert-success show"></div>
+
+      <div class="divider"></div>
+
+      <div id="history-list">
+        <label>Recent Sweeps</label>
+        <div id="history-items">Loading...</div>
+      </div>
+
+      <button class="btn btn-primary" onclick="resetFlow()" style="margin-top:20px">
+        New Sweep
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const API = ''; // Same origin — change to full URL if backend is separate
+    let sweepToken = null;
+    let selectedCurrency = null;
+    let timerInterval = null;
+
+    // ─── Step Navigation ─────────────────────────────────────
+    function showStep(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function showAlert(containerId, type, message) {
+      const el = document.getElementById(containerId);
+      el.className = `alert alert-${type} show`;
+      el.textContent = message;
+    }
+
+    function clearAlert(containerId) {
+      const el = document.getElementById(containerId);
+      el.className = 'alert';
+      el.textContent = '';
+    }
+
+    function setLoading(btnId, loading) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = loading;
+      btn.innerHTML = loading
+        ? '<div class="spinner"></div>'
+        : btn.dataset.label;
+    }
+
+    // Store labels
+    document.getElementById('btn-authorize').dataset.label = '<span>Verify Password</span>';
+    document.getElementById('btn-execute').dataset.label = '<span>🚀 Execute Sweep</span>';
+
+    // ─── Step 1: Authorize ────────────────────────────────────
+    document.getElementById('btn-authorize').addEventListener('click', async () => {
+      const password = document.getElementById('sweep-password').value;
+      if (!password) { showAlert('alert-auth', 'error', 'Please enter your password.'); return; }
+
+      clearAlert('alert-auth');
+      setLoading('btn-authorize', true);
+
+      try {
+        const res = await fetch(`${API}/api/sweep/authorize`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password }),
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          showAlert('alert-auth', 'error', data.error || 'Authorization failed.');
+          return;
+        }
+
+        sweepToken = data.sweepToken;
+        document.getElementById('sweep-password').value = '';
+        startTokenTimer(data.expiresInSeconds || 300);
+        showStep('step-sweep');
+        loadWalletAddresses();
+
+      } catch (err) {
+        showAlert('alert-auth', 'error', 'Network error — is the backend running?');
+      } finally {
+        setLoading('btn-authorize', false);
+      }
+    });
+
+    // ─── Token countdown timer ────────────────────────────────
+    function startTokenTimer(seconds) {
+      let remaining = seconds;
+      const el = document.getElementById('token-timer');
+
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        remaining--;
+        const m = Math.floor(remaining / 60).toString().padStart(1, '0');
+        const s = (remaining % 60).toString().padStart(2, '0');
+        el.textContent = `⏱ Token expires: ${m}:${s}`;
+        if (remaining <= 0) {
+          clearInterval(timerInterval);
+          el.textContent = '⛔ Token expired — re-authorize';
+          sweepToken = null;
+        }
+      }, 1000);
+    }
+
+    // ─── Load wallet addresses from API ──────────────────────
+    async function loadWalletAddresses() {
+      try {
+        const res = await fetch(`${API}/api/coinbase/wallets`);
+        const data = await res.json();
+        if (data.success && data.wallets) {
+          const w = data.wallets;
+          if (w.XRP?.address) document.getElementById('addr-XRP').textContent = truncate(w.XRP.address);
+          if (w.BTC?.address) document.getElementById('addr-BTC').textContent = truncate(w.BTC.address);
+          if (w.SOL?.address) document.getElementById('addr-SOL').textContent = truncate(w.SOL.address);
+          if (w.BNB?.address) document.getElementById('addr-BNB').textContent = truncate(w.BNB.address);
+        }
+      } catch {}
+    }
+
+    function truncate(addr) {
+      return addr.length > 16 ? addr.slice(0, 8) + '...' + addr.slice(-4) : addr;
+    }
+
+    // ─── Currency selection ───────────────────────────────────
+    function selectCurrency(currency, el) {
+      document.querySelectorAll('.wallet-card').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      selectedCurrency = currency;
+    }
+
+    // ─── Step 2: Execute sweep ────────────────────────────────
+    document.getElementById('btn-execute').addEventListener('click', async () => {
+      if (!sweepToken) { showAlert('alert-sweep', 'error', 'Token expired. Go back and re-authorize.'); return; }
+      if (!selectedCurrency) { showAlert('alert-sweep', 'error', 'Please select a destination wallet.'); return; }
+
+      const accountId = document.getElementById('coinbase-account-id').value.trim();
+      const amount = document.getElementById('sweep-amount').value.trim();
+
+      if (!accountId || !amount) { showAlert('alert-sweep', 'error', 'Account ID and amount are required.'); return; }
+
+      clearAlert('alert-sweep');
+      setLoading('btn-execute', true);
+
+      try {
+        const res = await fetch(`${API}/api/sweep/execute`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sweepToken, accountId, currency: selectedCurrency, amount }),
+        });
+
+        const data = await res.json();
+
+        if (!data.success) {
+          showAlert('alert-sweep', 'error', data.error || 'Sweep failed.');
+          return;
+        }
+
+        clearInterval(timerInterval);
+        document.getElementById('alert-done').textContent =
+          `✅ Swept ${amount} ${selectedCurrency} → ${truncate(data.destination)}`;
+        showStep('step-done');
+        loadHistory();
+
+      } catch (err) {
+        showAlert('alert-sweep', 'error', 'Network error during sweep execution.');
+      } finally {
+        setLoading('btn-execute', false);
+      }
+    });
+
+    // ─── Load history ─────────────────────────────────────────
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API}/api/sweep/history`);
+        const data = await res.json();
+        const container = document.getElementById('history-items');
+
+        if (!data.history || data.history.length === 0) {
+          container.innerHTML = '<p style="color:var(--muted);font-size:13px">No sweeps yet.</p>';
+          return;
+        }
+
+        container.innerHTML = data.history.slice(0, 10).map(tx => `
+          <div class="history-item">
+            <div>
+              <div style="font-weight:600">${tx.currency}</div>
+              <div style="font-size:11px;color:var(--muted)">${new Date(tx.createdAt).toLocaleString()}</div>
+            </div>
+            <div class="history-amount">+ ${tx.amount} ${tx.currency}</div>
+          </div>
+        `).join('');
+      } catch {
+        document.getElementById('history-items').textContent = 'Could not load history.';
+      }
+    }
+
+    // ─── Reset ────────────────────────────────────────────────
+    function resetFlow() {
+      sweepToken = null;
+      selectedCurrency = null;
+      clearInterval(timerInterval);
+      document.querySelectorAll('.wallet-card').forEach(c => c.classList.remove('selected'));
+      ['coinbase-account-id', 'sweep-amount'].forEach(id => document.getElementById(id).value = '');
+      showStep('step-auth');
+    }
+
+    // Allow Enter key on password field
+    document.getElementById('sweep-password').addEventListener('keydown', e => {
+      if (e.key === 'Enter') document.getElementById('btn-authorize').click();
+    });
+  </script>
+</body>
+</html>
