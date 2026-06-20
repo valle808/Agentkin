@@ -410,8 +410,8 @@
       const targetCurrencies = ['XRP', 'BTC', 'SOL', 'BNB'];
       
       targetCurrencies.forEach(curr => {
-        const account = coinbaseAccounts.find(a => a.currency === curr);
-        const balance = account && account.available_balance ? parseFloat(account.available_balance.value) : 0;
+        const accountsForCurr = coinbaseAccounts.filter(a => a.currency === curr);
+        const balance = accountsForCurr.reduce((sum, a) => sum + (parseFloat(a.available_balance?.value) || 0), 0);
         const addr = ownerWallets[curr]?.address || 'Not configured';
         
         // Highlight green if > 0
@@ -433,13 +433,13 @@
     document.getElementById('btn-execute').addEventListener('click', async () => {
       if (!sweepToken) { showAlert('alert-sweep', 'error', 'Token expired. Go back and re-authorize.'); return; }
 
-      const sweeps = ['XRP', 'BTC', 'SOL', 'BNB'].map(curr => {
-        const acc = coinbaseAccounts.find(a => a.currency === curr);
-        if (acc && parseFloat(acc.available_balance?.value) > 0 && ownerWallets[curr]?.address) {
-          return { accountId: acc.uuid, currency: curr, amount: acc.available_balance.value };
+      const sweeps = [];
+      const targetCurrencies = ['XRP', 'BTC', 'SOL', 'BNB'];
+      coinbaseAccounts.forEach(acc => {
+        if (targetCurrencies.includes(acc.currency) && parseFloat(acc.available_balance?.value) > 0 && ownerWallets[acc.currency]?.address) {
+          sweeps.push({ accountId: acc.uuid, currency: acc.currency, amount: acc.available_balance.value });
         }
-        return null;
-      }).filter(Boolean);
+      });
 
       if (sweeps.length === 0) {
         showAlert('alert-sweep', 'error', 'No available funds in configured wallets to sweep.');
