@@ -4,7 +4,10 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "trade": "ts-node scripts/trade-agent.ts",
+    "server": "ts-node server.ts",
+    "smart-trade": "ts-node scripts/smart-trade-agent.ts"
   },
   "keywords": [],
   "author": "",

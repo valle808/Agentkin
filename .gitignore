@@ -37,3 +37,4 @@ agentkin-core/build/
 agentkin-core/android/local.properties
 prisma/dev.db
 prisma/prisma/
+.vercel

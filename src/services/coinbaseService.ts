@@ -142,6 +142,16 @@ export const coinbaseService = {
     return coinbaseRequest('GET', `${COINBASE_API_VERSION}/best_bid_ask?${query}`);
   },
 
+  /** Get all available products / cryptos */
+  async getProducts(): Promise<any> {
+    return coinbaseRequest('GET', `${COINBASE_API_VERSION}/products`);
+  },
+
+  /** Get ticker for a specific product */
+  async getProductTicker(productId: string): Promise<any> {
+    return coinbaseRequest('GET', `${COINBASE_API_VERSION}/products/${productId}/ticker`);
+  },
+
   /** Place a market buy order */
   async marketBuy(productId: string, quoteSize: string): Promise<any> {
     return coinbaseRequest('POST', `${COINBASE_API_VERSION}/orders`, {
