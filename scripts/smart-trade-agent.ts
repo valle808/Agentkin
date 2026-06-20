@@ -129,13 +129,13 @@ export async function runContinuousSmartAgent() {
               
               console.log(`[ANALYSIS] 📊 ${currency} Position: Bought at $${buyPrice}, Current $${currentPrice}. Margin: ${(profitMargin*100).toFixed(2)}%`);
               
-              if (profitMargin > 0.04) { // 4% profit threshold to ensure fees are completely covered
+              if (profitMargin > 0.10) { // 10% profit threshold (10x the standard ~1% fee)
                  console.log(`[ACTION] 🔴 Revenue Verified (Net Positive after fees)! Market SELL ${productId} to secure profit.`);
                  await coinbaseService.marketSell(productId, amountStr);
                  delete ledger.activePositions[currency];
                  saveLedger(ledger);
               } else {
-                 console.log(`[HOLD] 💎 Margin not met (Current: ${(profitMargin*100).toFixed(2)}% vs Required: 4.00%). Holding to cover fees.`);
+                 console.log(`[HOLD] 💎 Margin not met (Current: ${(profitMargin*100).toFixed(2)}% vs Required: 10.00%). Holding to cover fees 10x.`);
               }
             } else {
               // Legacy position not in ledger. We HOLD to prevent unverified losses.

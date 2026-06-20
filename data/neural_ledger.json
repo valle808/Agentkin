@@ -2,9 +2,9 @@
   "trades": [],
   "activePositions": {
     "BTC": {
-      "buyPrice": null,
-      "amountInvested": 2.84,
-      "timestamp": "2026-06-20T21:34:00.228Z"
+      "buyPrice": 63872.57,
+      "amountInvested": 2.77,
+      "timestamp": "2026-06-20T21:37:26.043Z"
     }
   }
 }
