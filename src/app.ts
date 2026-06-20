@@ -4,6 +4,7 @@ import { errorHandler } from './middlewares/errorHandler';
 import authRoutes from './routes/authRoutes';
 import taskRoutes from './routes/taskRoutes';
 import transactionRoutes from './routes/transactionRoutes';
+import coinbaseRoutes from './routes/coinbaseRoutes';
 
 const app = express();
 
@@ -20,6 +21,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/kintasks', taskRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/coinbase', coinbaseRoutes);
 
 // Error Handling
 app.use(errorHandler);
