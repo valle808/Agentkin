@@ -269,9 +269,22 @@ function coinbaseRequest(method, path, body, apiKeyName, privateKeyRaw) {
             res2.on('end', () => {
                 try {
                     const parsed = JSON.parse(data);
-                    if (res2.statusCode >= 400) reject(new Error(`Coinbase ${res2.statusCode}: ${JSON.stringify(parsed)}`));
-                    else resolve(parsed);
-                } catch { reject(new Error(`Bad response: ${data}`)); }
+                    if (res2.statusCode >= 400) {
+                        if (parsed.errors && parsed.errors.length > 0) {
+                            reject(new Error(parsed.errors[0].message));
+                        } else if (parsed.error_description) {
+                            reject(new Error(parsed.error_description));
+                        } else if (parsed.message) {
+                            reject(new Error(parsed.message));
+                        } else {
+                            reject(new Error(`Coinbase ${res2.statusCode}: ${data}`));
+                        }
+                    } else {
+                        resolve(parsed);
+                    }
+                } catch(e) {
+                    reject(new Error(`Coinbase ${res2.statusCode}: ${data}`));
+                }
             });
         });
         req.on('error', reject);

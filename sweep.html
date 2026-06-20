@@ -468,15 +468,21 @@
         const errorResults = data.results.filter(r => !r.success);
         
         if (successResults.length > 0) {
-          let msg = `✅ Swept ${successResults.length} asset(s).`;
+          let msg = `✅ Swept ${successResults.length} asset(s).<br><br>`;
+          successResults.forEach(r => msg += `🟢 <b>${r.currency}</b>: Success<br>`);
           if (errorResults.length > 0) {
-             msg += ` <span style="color:var(--red)">(${errorResults.length} failed)</span>`;
+             msg += `<br>⚠️ The following assets failed:<br>`;
+             errorResults.forEach(r => msg += `🔴 <b>${r.currency}</b>: ${r.error}<br>`);
           }
           document.getElementById('alert-done').innerHTML = msg;
           showStep('step-done');
           loadHistory();
         } else {
-          showAlert('alert-sweep', 'error', 'Failed to sweep any assets: ' + (errorResults[0]?.error || 'Unknown error'));
+          let errMsg = 'Failed to sweep assets due to Coinbase limits:<br><br>';
+          errorResults.forEach(r => {
+             errMsg += `🔴 <b>${r.currency}</b>: ${r.error}<br>`;
+          });
+          showAlert('alert-sweep', 'error', errMsg);
         }
 
       } catch (err) {
