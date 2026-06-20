@@ -15,6 +15,7 @@
   "type": "commonjs",
   "dependencies": {
     "@prisma/client": "^5.17.0",
+    "ethers": "^6.17.0",
     "express": "^5.2.1",
     "multer": "^2.0.2",
     "socket.io": "^4.8.3",

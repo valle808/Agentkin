@@ -7,6 +7,9 @@ import { RSI } from 'technicalindicators';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 import { coinbaseService } from '../src/services/coinbaseService';
+import { vault } from '../src/services/vaultService';
+import { triggerValleTokenReward } from '../src/services/valleSmartContractService';
+import { consultULM } from '../src/services/ulmService';
 
 const GOAL_USD = 1000000000000; // 1 Trillion USD
 const LOOP_INTERVAL_MS = 60000;
@@ -30,16 +33,20 @@ function saveLedger(ledger: any) {
   fs.writeFileSync(LEDGER_PATH, JSON.stringify(ledger, null, 2));
 }
 
-// Simulated LLM Judge to adjust margins
-function runLLMJudge(ledger: any) {
+// Simulated LLM Judge + ULM Philosophy to adjust margins
+async function runLLMJudge(ledger: any, totalValue: number) {
   console.log(`\n[JUDGE AGENT] Analyzing trading performance...`);
-  // If we have scraped profits, we can afford to be more aggressive or lower margin to secure faster wins
-  if (ledger.scrapedProfits > 0) {
-    dynamicMarginThreshold = 0.05; // Drop to 5% if we already have a safety net
-    console.log(`[JUDGE AGENT] Performance is solid. Lowering margin threshold to 5.00% to accelerate trade velocity.`);
+  
+  const { recommendation, philosophicalRating } = await consultULM(totalValue, dynamicMarginThreshold * 100, 24);
+  console.log(`[ULM EVALUATION] ${recommendation} (Rating: ${philosophicalRating}/100)`);
+
+  // If we have scraped profits and the philosophy rating is high, we can be more aggressive
+  if (ledger.scrapedProfits > 0 && philosophicalRating >= 50) {
+    dynamicMarginThreshold = 0.05; // Drop to 5% if we already have a safety net and neutral/confident sentiment
+    console.log(`[JUDGE AGENT] Ecosystem is stable. Lowering margin threshold to 5.00% to accelerate trade velocity.`);
   } else {
     dynamicMarginThreshold = 0.10;
-    console.log(`[JUDGE AGENT] Building initial capital. Maintaining strict 10.00% margin threshold.`);
+    console.log(`[JUDGE AGENT] Building initial capital or market uncertain. Maintaining strict 10.00% margin threshold.`);
   }
 }
 
@@ -62,7 +69,7 @@ export async function runContinuousSmartAgent() {
       }
       
       const ledger = loadLedger();
-      runLLMJudge(ledger);
+      await runLLMJudge(ledger, totalValue);
 
       console.log(`💰 Global Swarm Capital: $${totalValue.toFixed(2)} USD | Secured Profits: $${(ledger.scrapedProfits || 0).toFixed(2)}`);
       if (totalValue >= GOAL_USD) {
@@ -177,6 +184,15 @@ export async function runContinuousSmartAgent() {
                  const scraped = profitRaw * 0.20; // Scrape 20%
                  ledger.scrapedProfits = (ledger.scrapedProfits || 0) + scraped;
                  console.log(`[PROFIT SCRAPER] Securing 20% of profit ($${scraped.toFixed(2)}) into vault.`);
+
+                 // HUMANESE ECOSYSTEM VALLE TOKEN REWARD
+                 try {
+                     const ownerWallets = await vault.getOwnerWallets();
+                     const evmAddress = ownerWallets.BNB?.address || '0x0000000000000000000000000000000000000000';
+                     await triggerValleTokenReward(scraped, evmAddress);
+                 } catch (e: any) {
+                     console.log(`[VALLE SMART CONTRACT] Could not trigger reward: ${e.message}`);
+                 }
 
                  delete ledger.activePositions[currency];
                  saveLedger(ledger);
