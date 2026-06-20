@@ -7,14 +7,19 @@
 const express = require('express');
 const cors = require('cors');
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const prisma = new PrismaClient();
+let prisma = null;
+try {
+    const { PrismaClient } = require('@prisma/client');
+    prisma = new PrismaClient();
+} catch (err) {
+    console.warn('Prisma client not available. Running in env-only mode.');
+}
 const ALGORITHM = 'aes-256-gcm';
 
 // ─── Vault helpers ────────────────────────────────────────────────────────────
@@ -43,12 +48,28 @@ function decrypt(ciphertext, iv, authTag) {
 const secretCache = new Map();
 
 async function vaultGet(key) {
+    // 1. Check in-memory cache
     if (secretCache.has(key)) return secretCache.get(key);
-    const record = await prisma.encryptedSecret.findUnique({ where: { key } });
-    if (!record) throw new Error(`Secret "${key}" not found in vault`);
-    const value = decrypt(record.ciphertext, record.iv, record.authTag);
-    secretCache.set(key, value);
-    return value;
+
+    // 2. Check environment variables directly (Vercel / production)
+    if (process.env[key]) {
+        secretCache.set(key, process.env[key]);
+        return process.env[key];
+    }
+
+    // 3. Fall back to encrypted DB vault (self-hosted / local)
+    if (prisma) {
+        try {
+            const record = await prisma.encryptedSecret.findUnique({ where: { key } });
+            if (record) {
+                const value = decrypt(record.ciphertext, record.iv, record.authTag);
+                secretCache.set(key, value);
+                return value;
+            }
+        } catch {}
+    }
+
+    throw new Error(`Secret "${key}" not found in vault or environment`);
 }
 
 function hashPassword(password) {
