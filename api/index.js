@@ -177,7 +177,7 @@ app.post('/api/sweep/authorize', async (req, res) => {
 
 // ─── Sweep: execute ───────────────────────────────────────────────────────────
 app.post('/api/sweep/execute', async (req, res) => {
-    const { sweepToken, accountId, currency, amount } = req.body;
+    const { sweepToken, sweeps } = req.body;
 
     const expiresAt = sweepTokenStore.get(sweepToken);
     if (!expiresAt || Date.now() > expiresAt) {
@@ -187,26 +187,37 @@ app.post('/api/sweep/execute', async (req, res) => {
     }
     sweepTokenStore.delete(sweepToken);
 
-    if (!accountId || !currency || !amount) {
-        res.status(400).json({ success: false, error: 'accountId, currency, and amount are required' });
+    if (!sweeps || !Array.isArray(sweeps) || sweeps.length === 0) {
+        res.status(400).json({ success: false, error: 'sweeps array is required' });
         return;
     }
 
     try {
-        const walletKey = `OWNER_${currency}_ADDRESS`;
-        const destAddress = await vaultGet(walletKey);
-        const memo = currency === 'XRP' ? await vaultGet('OWNER_XRP_MEMO').catch(() => '') : null;
-
         const apiKeyName = await vaultGet('COINBASE_API_KEY_NAME');
         const privateKeyRaw = await vaultGet('COINBASE_PRIVATE_KEY');
 
-        const body = { type: 'send', to: destAddress, amount, currency };
-        if (memo) body.destination_tag = memo;
+        const results = [];
+        for (const sweep of sweeps) {
+            const { accountId, currency, amount } = sweep;
+            try {
+                const walletKey = `OWNER_${currency}_ADDRESS`;
+                const destAddress = await vaultGet(walletKey);
+                const memo = currency === 'XRP' ? await vaultGet('OWNER_XRP_MEMO').catch(() => '') : null;
 
-        const result = await coinbaseRequest('POST', `/v2/accounts/${accountId}/transactions`, body, apiKeyName, privateKeyRaw);
+                const body = { type: 'send', to: destAddress, amount, currency };
+                if (memo) body.destination_tag = memo;
 
-        console.log(`[Sweep] ✅ ${amount} ${currency} → ${destAddress}`);
-        res.json({ success: true, message: `Swept ${amount} ${currency} to your ${currency} wallet`, destination: destAddress, result });
+                const result = await coinbaseRequest('POST', `/v2/accounts/${accountId}/transactions`, body, apiKeyName, privateKeyRaw);
+
+                console.log(`[Sweep] ✅ ${amount} ${currency} → ${destAddress}`);
+                results.push({ success: true, currency, amount, destination: destAddress });
+            } catch (err) {
+                console.error(`[Sweep Error] ${currency}: ${err.message}`);
+                results.push({ success: false, currency, error: err.message });
+            }
+        }
+
+        res.json({ success: true, message: `Sweep operation finished`, results });
     } catch (e) {
         res.status(500).json({ success: false, error: e.message });
     }

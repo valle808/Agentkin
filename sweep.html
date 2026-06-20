@@ -260,40 +260,18 @@
 
     <!-- STEP 2: Select currency & amount -->
     <div class="step" id="step-sweep">
-      <h2>Configure Sweep</h2>
-      <p class="subtitle">Select currency and amount to sweep to your wallet.</p>
+      <h2>Balances & Sweep</h2>
+      <p class="subtitle">Your connected Coinbase balances. Click below to sweep all available funds.</p>
 
       <div id="alert-sweep" class="alert"></div>
       <div class="token-timer" id="token-timer">⏱ Token valid: 5:00</div>
 
-      <label>Select Destination Wallet</label>
-      <div class="wallet-cards">
-        <div class="wallet-card" onclick="selectCurrency('XRP', this)" data-currency="XRP">
-          <div class="symbol">⚡ XRP</div>
-          <div class="addr" id="addr-XRP">rw2ciyaN...WKQg</div>
-        </div>
-        <div class="wallet-card" onclick="selectCurrency('BTC', this)" data-currency="BTC">
-          <div class="symbol">₿ BTC</div>
-          <div class="addr" id="addr-BTC">3CJreF7L...ujh</div>
-        </div>
-        <div class="wallet-card" onclick="selectCurrency('SOL', this)" data-currency="SOL">
-          <div class="symbol">◎ SOL</div>
-          <div class="addr" id="addr-SOL">E1pAENVb...zTL</div>
-        </div>
-        <div class="wallet-card" onclick="selectCurrency('BNB', this)" data-currency="BNB">
-          <div class="symbol">🔶 BNB</div>
-          <div class="addr" id="addr-BNB">0xF765...dc9</div>
-        </div>
+      <div class="wallet-cards" id="wallet-cards-container">
+        <!-- JS populates this -->
       </div>
 
-      <label for="coinbase-account-id">Coinbase Account ID (from /api/coinbase/accounts)</label>
-      <input type="text" id="coinbase-account-id" placeholder="e.g. a1b2c3d4-..." />
-
-      <label for="sweep-amount">Amount</label>
-      <input type="text" id="sweep-amount" placeholder="e.g. 100.00" />
-
       <button class="btn btn-danger" id="btn-execute">
-        <span>🚀 Execute Sweep</span>
+        <span>🚀 Sweep All Funds</span>
       </button>
     </div>
 
@@ -320,7 +298,8 @@
   <script>
     const API = ''; // Same origin — change to full URL if backend is separate
     let sweepToken = null;
-    let selectedCurrency = null;
+    let coinbaseAccounts = [];
+    let ownerWallets = {};
     let timerInterval = null;
 
     // ─── Step Navigation ─────────────────────────────────────
@@ -376,10 +355,12 @@
         }
 
         sweepToken = data.sweepToken;
+        coinbaseAccounts = data.preview?.accounts || [];
         document.getElementById('sweep-password').value = '';
         startTokenTimer(data.expiresInSeconds || 300);
+        await loadWalletAddresses();
+        renderBalances();
         showStep('step-sweep');
-        loadWalletAddresses();
 
       } catch (err) {
         showAlert('alert-auth', 'error', 'Network error — is the backend running?');
@@ -407,41 +388,62 @@
       }, 1000);
     }
 
-    // ─── Load wallet addresses from API ──────────────────────
     async function loadWalletAddresses() {
       try {
         const res = await fetch(`${API}/api/coinbase/wallets`);
         const data = await res.json();
         if (data.success && data.wallets) {
-          const w = data.wallets;
-          if (w.XRP?.address) document.getElementById('addr-XRP').textContent = truncate(w.XRP.address);
-          if (w.BTC?.address) document.getElementById('addr-BTC').textContent = truncate(w.BTC.address);
-          if (w.SOL?.address) document.getElementById('addr-SOL').textContent = truncate(w.SOL.address);
-          if (w.BNB?.address) document.getElementById('addr-BNB').textContent = truncate(w.BNB.address);
+          ownerWallets = data.wallets;
         }
       } catch {}
     }
 
     function truncate(addr) {
-      return addr.length > 16 ? addr.slice(0, 8) + '...' + addr.slice(-4) : addr;
+      return addr && addr.length > 16 ? addr.slice(0, 8) + '...' + addr.slice(-4) : addr;
     }
 
-    // ─── Currency selection ───────────────────────────────────
-    function selectCurrency(currency, el) {
-      document.querySelectorAll('.wallet-card').forEach(c => c.classList.remove('selected'));
-      el.classList.add('selected');
-      selectedCurrency = currency;
+    function renderBalances() {
+      const container = document.getElementById('wallet-cards-container');
+      container.innerHTML = '';
+      
+      const targetCurrencies = ['XRP', 'BTC', 'SOL', 'BNB'];
+      
+      targetCurrencies.forEach(curr => {
+        const account = coinbaseAccounts.find(a => a.currency === curr);
+        const balance = account && account.available_balance ? parseFloat(account.available_balance.value) : 0;
+        const addr = ownerWallets[curr]?.address || 'Not configured';
+        
+        // Highlight green if > 0
+        const balanceColor = balance > 0 ? 'var(--green)' : 'var(--muted)';
+        
+        container.innerHTML += `
+        <div class="wallet-card" style="cursor:default">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px">
+            <div class="symbol">${curr}</div>
+            <div style="font-family:'JetBrains Mono',monospace; color:${balanceColor}; font-weight:bold">${balance}</div>
+          </div>
+          <div class="addr">${truncate(addr)}</div>
+        </div>
+        `;
+      });
     }
 
     // ─── Step 2: Execute sweep ────────────────────────────────
     document.getElementById('btn-execute').addEventListener('click', async () => {
       if (!sweepToken) { showAlert('alert-sweep', 'error', 'Token expired. Go back and re-authorize.'); return; }
-      if (!selectedCurrency) { showAlert('alert-sweep', 'error', 'Please select a destination wallet.'); return; }
 
-      const accountId = document.getElementById('coinbase-account-id').value.trim();
-      const amount = document.getElementById('sweep-amount').value.trim();
+      const sweeps = ['XRP', 'BTC', 'SOL', 'BNB'].map(curr => {
+        const acc = coinbaseAccounts.find(a => a.currency === curr);
+        if (acc && parseFloat(acc.available_balance?.value) > 0 && ownerWallets[curr]?.address) {
+          return { accountId: acc.uuid, currency: curr, amount: acc.available_balance.value };
+        }
+        return null;
+      }).filter(Boolean);
 
-      if (!accountId || !amount) { showAlert('alert-sweep', 'error', 'Account ID and amount are required.'); return; }
+      if (sweeps.length === 0) {
+        showAlert('alert-sweep', 'error', 'No available funds in configured wallets to sweep.');
+        return;
+      }
 
       clearAlert('alert-sweep');
       setLoading('btn-execute', true);
@@ -450,7 +452,7 @@
         const res = await fetch(`${API}/api/sweep/execute`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sweepToken, accountId, currency: selectedCurrency, amount }),
+          body: JSON.stringify({ sweepToken, sweeps }),
         });
 
         const data = await res.json();
@@ -461,10 +463,21 @@
         }
 
         clearInterval(timerInterval);
-        document.getElementById('alert-done').textContent =
-          `✅ Swept ${amount} ${selectedCurrency} → ${truncate(data.destination)}`;
-        showStep('step-done');
-        loadHistory();
+        
+        const successResults = data.results.filter(r => r.success);
+        const errorResults = data.results.filter(r => !r.success);
+        
+        if (successResults.length > 0) {
+          let msg = `✅ Swept ${successResults.length} asset(s).`;
+          if (errorResults.length > 0) {
+             msg += ` <span style="color:var(--red)">(${errorResults.length} failed)</span>`;
+          }
+          document.getElementById('alert-done').innerHTML = msg;
+          showStep('step-done');
+          loadHistory();
+        } else {
+          showAlert('alert-sweep', 'error', 'Failed to sweep any assets: ' + (errorResults[0]?.error || 'Unknown error'));
+        }
 
       } catch (err) {
         showAlert('alert-sweep', 'error', 'Network error during sweep execution.');
@@ -502,10 +515,7 @@
     // ─── Reset ────────────────────────────────────────────────
     function resetFlow() {
       sweepToken = null;
-      selectedCurrency = null;
       clearInterval(timerInterval);
-      document.querySelectorAll('.wallet-card').forEach(c => c.classList.remove('selected'));
-      ['coinbase-account-id', 'sweep-amount'].forEach(id => document.getElementById(id).value = '');
       showStep('step-auth');
     }
 
