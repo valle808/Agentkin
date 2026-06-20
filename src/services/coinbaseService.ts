@@ -152,6 +152,11 @@ export const coinbaseService = {
     return coinbaseRequest('GET', `${COINBASE_API_VERSION}/products/${productId}`);
   },
 
+  /** Get historical OHLCV candles */
+  async getHistoricalCandles(productId: string, start: string, end: string, granularity: string): Promise<any> {
+    return coinbaseRequest('GET', `${COINBASE_API_VERSION}/products/${productId}/candles?start=${start}&end=${end}&granularity=${granularity}`);
+  },
+
   /** Place a market buy order */
   async marketBuy(productId: string, quoteSize: string): Promise<any> {
     return coinbaseRequest('POST', `${COINBASE_API_VERSION}/orders`, {
