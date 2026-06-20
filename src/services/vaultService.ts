@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { PrismaClient } from '../generated/client/client';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * AgentKin Secrets Vault Service
