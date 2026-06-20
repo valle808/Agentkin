@@ -149,7 +149,7 @@ export const coinbaseService = {
 
   /** Get ticker for a specific product */
   async getProductTicker(productId: string): Promise<any> {
-    return coinbaseRequest('GET', `${COINBASE_API_VERSION}/products/${productId}/ticker`);
+    return coinbaseRequest('GET', `${COINBASE_API_VERSION}/products/${productId}`);
   },
 
   /** Place a market buy order */

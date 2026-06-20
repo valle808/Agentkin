@@ -79,10 +79,15 @@ export async function runContinuousSmartAgent() {
              const targetAsset = 'BTC'; 
              const productId = `${targetAsset}-USD`;
              
-             try {
+            try {
                const ticker = await coinbaseService.getProductTicker(productId);
-               const currentPrice = parseFloat(ticker.price);
+               const currentPrice = parseFloat(ticker.price || ticker.product?.price || ticker.last_trade_price);
                
+               if (isNaN(currentPrice)) {
+                 console.log(`[ERROR] Could not parse price from ticker response. Buy aborted.`);
+                 continue;
+               }
+
                console.log(`[ACTION] 🟢 Market BUY ${productId} with ${quoteSize} ${currency} at ~$${currentPrice}`);
                const orderRes = await coinbaseService.marketBuy(productId, quoteSize);
                
@@ -103,22 +108,34 @@ export async function runContinuousSmartAgent() {
           const productId = `${currency}-USD`;
           try {
             const ticker = await coinbaseService.getProductTicker(productId);
-            const currentPrice = parseFloat(ticker.price);
+            const currentPrice = parseFloat(ticker.price || ticker.product?.price || ticker.last_trade_price);
             
+            if (isNaN(currentPrice)) {
+              console.log(`[ERROR] Could not parse price from ticker response. Sell aborted.`);
+              continue;
+            }
+
             const position = ledger.activePositions[currency];
             if (position) {
               const buyPrice = position.buyPrice;
+              if (isNaN(buyPrice)) {
+                // Fix corrupted ledger entry
+                delete ledger.activePositions[currency];
+                saveLedger(ledger);
+                console.log(`[HOLD] 🛑 Corrupted ledger buy price. Removed entry.`);
+                continue;
+              }
               const profitMargin = (currentPrice - buyPrice) / buyPrice;
               
               console.log(`[ANALYSIS] 📊 ${currency} Position: Bought at $${buyPrice}, Current $${currentPrice}. Margin: ${(profitMargin*100).toFixed(2)}%`);
               
-              if (profitMargin > 0.015) { // 1.5% profit threshold
-                 console.log(`[ACTION] 🔴 Revenue Verified! Market SELL ${productId} to secure profit.`);
+              if (profitMargin > 0.04) { // 4% profit threshold to ensure fees are completely covered
+                 console.log(`[ACTION] 🔴 Revenue Verified (Net Positive after fees)! Market SELL ${productId} to secure profit.`);
                  await coinbaseService.marketSell(productId, amountStr);
                  delete ledger.activePositions[currency];
                  saveLedger(ledger);
               } else {
-                 console.log(`[HOLD] 💎 Margin not met. Diamond Hands activated via OpenClaw directive.`);
+                 console.log(`[HOLD] 💎 Margin not met (Current: ${(profitMargin*100).toFixed(2)}% vs Required: 4.00%). Holding to cover fees.`);
               }
             } else {
               // Legacy position not in ledger. We HOLD to prevent unverified losses.
