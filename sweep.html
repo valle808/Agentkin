@@ -311,13 +311,13 @@
     function showAlert(containerId, type, message) {
       const el = document.getElementById(containerId);
       el.className = `alert alert-${type} show`;
-      el.textContent = message;
+      el.innerHTML = message;
     }
 
     function clearAlert(containerId) {
       const el = document.getElementById(containerId);
       el.className = 'alert';
-      el.textContent = '';
+      el.innerHTML = '';
     }
 
     function setLoading(btnId, loading) {
